@@ -95,18 +95,12 @@ VER_MSG
 		.text  	"************************",CR,LF
 		.text	"*     BinMon v0.1      *",CR,LF
 		.text	"*     Ross Archer      *",CR,LF
-		.text	"* In the Public Domain *",CR,LF
+		.text	"*   MIT Licensce Use   *",CR,LF
 		.text	"*   27 November 2025   *",CR,LF
 		.text	"************************",CR,LF
 		.text	0
 ; END main monitor program
-QBF_MSG
-		.text   CR,LF
-		.text   "        _,-=._              /|_/|",CR,LF
-		.text   "       *-.}   `=._,.-=-._.,  @ @.>",CR,LF
-		.text   "          `._ _,-.   )      _,.-'",CR,LF
-		.text   "             `    V.v-'^V''v",CR,CR,LF
-		.text   0
+
 		
 CMD_TBL 	
 		.word	CMD_STATE_INIT
