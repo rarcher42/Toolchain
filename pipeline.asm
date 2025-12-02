@@ -62,6 +62,21 @@ CNT		= CNT_L
 
 TEMP	.byte	?
 
+*		= $0200
+; Mirror the monitor state
+MM_FLAGS 
+		.byte	?				; 8 bits
+MM_A	.byte	?				; Always 8 bits in monitor mode
+MM_B	.byte	?				; Always 8 bits in monitor mode
+MM_DBR	.byte	?				; Always 8 bits
+MM_X	.word	?				; 16 bits in monitor mode
+MM_Y	.word 	?				; 16 bits in monitor mode
+MM_DP	.word	?				; 16 bits
+MM_SP	.word	?				; 16 bits in monitor mode
+MM_PBR	.byte	?				; 8 bits
+	
+		
+
 SIZE_CMD_BUF	= 512			; maximum command length
 *		= $0400					; CMD buffer
 CMD_BUF		
@@ -297,6 +312,93 @@ WR_BN1	LDA	CMD_BUF,X		; Get the next buffer byte
 		JSR	SEND_ACK
 		RTS
 	
+
+; Save state when E=0, X=1 , M=1: No emulation mode, 8 bit index, 8 bit A and M
+SAVSX1M1
+		; Save the CPU state (Note: X_FLAG=0 *16 bit index), M=1 (8 bit accumulator
+		PHP					; Stow flags temporarily on stack
+		STA MM_A			; Store lower 8 bits (A)
+		XBA
+		STA	MM_B			; Store B
+		PLA					; restore flags
+		STA MM_FLAGS		; Save 8 bit flags
+		STX	MM_X			; Save 16 bit X
+		STZ MM_X+1			; No upper byte of X
+		STY	MM_Y			; Save 16 bit Y
+		STZ	MM_Y+1			; No upper byte of Y
+		PHB					; Save 8 bit DBR
+		PLA
+		STA	MM_DBR			; "
+		PHD					; Save DPR (always 16 bits)
+		PLA
+		STA	MM_DP			; save the lower 8 bits
+		PLA
+		STA	MM_DP+1			; save the upper 8 bits
+		TSC					; Save the stack pointer to C=B|A
+		STA MM_SP			; LSB of SP
+		XBA					; Get MSB of SP
+		STA	MM_SP+1			; store MSB of SP
+		PHK					; Save PBR
+		PLA
+		STA	MM_PBR			
+		RTS	
+; Save state when E=0, X=0 , M=1: No emulation mode, 16 bit index, 8 bit A and M
+SAVSX0M1
+		; Save the CPU state (Note: X_FLAG=0 *16 bit index), M=1 (8 bit accumulator
+		PHP					; Stow flags temporarily on stack
+		STA MM_A			; Store lower 8 bits (A)
+		XBA
+		STA	MM_B			; Store upper 8 bits (B
+		PLA					; restore flags
+		STA MM_FLAGS		; Save 8 bit flags
+		STX	MM_X			; Save 16 bit X
+		STY	MM_Y			; Save 16 bit Y 
+		PHB					; Save 8 bit DBR
+		PLA
+		STA	MM_DBR			; "
+		PHD					; Save DPR (always 16 bits)
+		PLA
+		STA	MM_DP			; save the lower 8 bits
+		PLA
+		STA	MM_DP+1			; save the upper 8 bits
+		TSC					; Save the stack pointer to C=B|A
+		STA MM_SP			; LSB of SP
+		XBA					; Get MSB of SP
+		STA	MM_SP+1			; store MSB of SP
+		PHK					; Save PBR
+		PLA
+		STA	MM_PBR			
+		RTS
+		
+; Save state when E=0, X=0 , M=0: No emulation mode, 16 bit index, 16 bit A and M
+SAVSX0M0
+		; Save the CPU state (Note: X_FLAG=0 *16 bit index), M=1 (8 bit accumulator
+		PHP					; Stow flags temporarily on stack
+		STA MM_A			; Store 16 bit A in MM_B, MM_A	; Note: memory order must be MM_B=MM_A+1!
+		; Now make A 8 bits (will be restored back to 16 bits in RESSX0M0)
+		SEP #M_FLAG			; A = 8 bits now
+		PLA	                ; restore flags
+		AND #~M_FLAG		; clear M flag but leave A as 8 bits
+		STA MM_FLAGS		; Save 8 bit flags (pretending M=0)
+		STX	MM_X			; Save 16 bit X
+		STY	MM_Y			; Save 16 bit Y 
+		PHB					; Save 8 bit DBR
+		PLA
+		STA	MM_DBR			; "
+		PHD					; Save DPR (always 16 bits)
+		PLA
+		STA	MM_DP			; save the lower 8 bits
+		PLA
+		STA	MM_DP+1			; save the upper 8 bits
+		TSC					; Save the stack pointer to C=B|A
+		STA MM_SP			; LSB of SP
+		XBA					; Get MSB of SP
+		STA	MM_SP+1			; store MSB of SP
+		PHK					; Save PBR
+		PLA
+		STA	MM_PBR	
+		REP #M_FLAG			; restore 16 bit A mode
+		RTS
 ; [03][start-address-low][start-address-high][start-address-high]	
 GO_CMD	JSR	SEND_ACK
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
@@ -305,6 +407,8 @@ GO_CMD	JSR	SEND_ACK
 		STA	EA_H
 		LDA	CMD_BUF+3
 		STA	EA_B
+		JSR	SAVSX0M1		; Save context to mirror register set in memory
+		; Done saving context
 		JML [EA_PTR]
 
 ECHO_CMD
