@@ -7,6 +7,14 @@
 
 		.INCLUDE "via_symbols.inc"
 
+; Memory Map
+;
+; 00:8000 - 00:FFFF		-	32K Mapped flash ROM from 128K flash
+; 00:7F00 - 00:7FFF		-	I/O space (various peripherals)
+; 00:7E00 - 00:7EFF		- 	Monitor direct PAGE
+; 00:7000 - 00:7DFF		-	Monitor stack area
+; 00:0000 - 00:6FFF		-	Development area*
+
 
 BS		= $08
 LF		= $0A
@@ -82,7 +90,8 @@ SIZE_CMD_BUF	= 512			; maximum command length
 CMD_BUF		
 		.fill	SIZE_CMD_BUF
 
-STACKTOP	= $7EFF					; Top of RAM (I/O 0x7F00-0x7FFF)
+MON_DP		= $7E00				; Monitor direct page @ $7E00-$7EFF
+STACKTOP	= $7DFF				; Top of RAM (I/O 0x7F00-0x7FFF)
 
 * = $F800
 		.xl
@@ -93,6 +102,9 @@ START
 		XCE					; 
 		REP	#(X_FLAG | D_FLAG)		; 16 bit index, binary mode
 		SEP	#M_FLAG				; 8 bit A (process byte stream) 
+		LDX	#MON_DP				; Set direct page to $7E00
+		PHX
+		PLD						; DP now at $7E00
 		LDX	#STACKTOP			; Set 16bit SP to usable RAMtop
 		TXS						; Set up the stack pointer
 		JSR	INIT_FIFO			; initialize FIFO
