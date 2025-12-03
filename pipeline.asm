@@ -78,29 +78,30 @@ BK_H	.byte	?				; Replaced high byte original contents
 
 TEMP	.byte	?
 
-*		= $0200
-; Mirror the user state upon BRK/COP exit state
-MU_FLAGS 
-		.byte	?				; 8 bits
-MU_A	.byte	?				; lower 8 bits of A
-MU_B	.byte	?				; B/upper 8 bits of A
-MU_DBR	.byte	?				; Always 8 bits
-MU_X	.word	?				; Always save as 16 bits
-MU_Y	.word 	?				; Always save as 16 bits
-MU_DP	.word	?				; Always 16 bits
-MU_SP	.word	?				; Always save as 16 bits
-MU_PBR	.byte	?				; Always 8 bits
-MU_PC	.word	?
-	
-		
 
 SIZE_CMD_BUF	= 512			; maximum command length
 *		= $0400					; CMD buffer
 CMD_BUF		
 		.fill	SIZE_CMD_BUF
 
-MON_DP		= $7E00				; Monitor direct page @ $7E00-$7EFF
-STACKTOP	= $7DFF				; Top of RAM (I/O 0x7F00-0x7FFF)
+STACKTOP	= $7CFF				; Top of RAM (I/O 0x7F00-0x7FFF)
+MON_DP		= $7D00				; Monitor direct page @ $7D00-$7DFF
+*			= $7E00
+; Mirror the user state upon BRK/COP exit state
+M_EFLAG	
+		.byte	?			; Track the mode we came from re-entering the monitor	
+M_FLAGS 				
+		.byte	?			; 8 bits
+M_A	.byte	?				; lower 8 bits of A
+M_B	.byte	?				; B/upper 8 bits of A
+M_DBR	.byte	?			; Always 8 bits
+M_X	.word	?				; Always save as 16 bits
+M_Y	.word 	?				; Always save as 16 bits
+M_DPR	.word	?			; Always 16 bits
+M_SP	.word	?			; Always save as 16 bits
+M_PBR	.byte	?			; Always 8 bits
+M_PC	.word	?
+
 
 * = $F800
 		.xl
@@ -179,18 +180,12 @@ CMD_STATE_INIT
 		STX	CMD_IX				; store 16 bit pointerkk
 		LDA	#1
 		STA	CMD_STATE
-		;LDA	#'0'
-		;JSR	PUTCH
 		RTS
 		
 ; State 1: AWAIT_SOF
 CMD_STATE_AWAIT_SOF
 		JSR	GET_FRAW
 		BCC	CMD_AX1				; Nothing waiting
-		;PHA
-		;LDA	#'1'
-		;JSR	PUTCH
-		;PLA
 		CMP	#SOF
 		BNE	CMD_AX1
 		LDA	#2
@@ -201,10 +196,6 @@ CMD_AX1 RTS
 CMD_STATE_COLLECT
 		JSR	GET_FRAW
 		BCC	CMD_CX1				; if nothing in FIFO, quit
-		;PHA
-		;LDA	#'2'
-		;JSR	PUTCH
-		;PLA
 		CMP	#EOF				; In case we hit the end of text
 		BNE CMD_CC2	
 		LDA	#4					; Go process the command
@@ -227,10 +218,6 @@ CMD_CX1
 CMD_STATE_TRANSLATE
 		JSR	GET_FRAW
 		BCC	CMD_TX1				; If nothing in FIFO, quit 
-		;PHA
-		;LDA	#'3'
-		;JSR	PUTCH
-		;PLA
 CMD_TC1	CMP	#EOF
 		BNE	CMD_TC2
 		LDA	#4
@@ -281,6 +268,8 @@ PCBC3	CMP	#'E'				; echo command
 		JMP	ECHO_CMD
 PCBERR	JSR	SEND_NAK			; Unknown cmd
 		RTS
+
+
 ; [01][start-address-Low][start-address-high][start-address-page][LEN_L][LEN_H]		; 
 ; Read n+1 bytes (1 to 256 inclusive) and Return
 ; X / CMD_IX is index to next byte
@@ -336,80 +325,58 @@ WR_BN1	LDA	CMD_BUF,X		; Get the next buffer byte
 
 ; Native BREAK exception handler:  Came from native mode user program!
 ; return from user code (RAM) to monitor (ROM)
-BRK_ISR_NATIVE
-		; Save the CPU stat
-		; Save FLAGS & C=A+B
-		PHP					; Stow flags temporarily on stack
+BRK_NAT_ISR
 		REP	#X_FLAG			; 16 bit index, binary mode
 		SEP	#M_FLAG			; 8 bit A (process byte variables)
-		; Save 8 bit registers
-		STA MU_A			; Store lower 8 bits (A)
+		STX	M_X
+		STY	M_Y
+		STA	M_A
 		XBA
-		STA	MU_B			; Store upper 8 bits (B
-		PLA					; restore flags
-		STA MU_FLAGS		; Save 8 bit flags
-		; Process the stuff from the stack (save user PC (where BRK was), etc.)
-		; Note: monitor has to restore instruction bytes overwritten by BRK before here too!
-		
-		; end process the stuff from the stack 
-		PHB					; Save 8 bit DBR
+		STA	M_B
 		PLA
-		STA	MU_DBR			; "
-		PHK					; Save PBR
+		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
+		STZ	M_EFLAG			; E=0; we came from native mode
+		PLX					; Pull PC15..0 return address off stack
+		DEX					; points one past BRK... restore to point to BRK for continue
+		STX	M_PC			; save PC=*(BRK instruction)
+		PLA					; Get PBR of code
+		STA	M_PBR
+		TSX					; Now we're pulled everything off stack - it's pre-BRK position
+		STX	M_SP
+		PHD					; save DPR (zero page pointer)
+		PLX					
+		STX	M_DPR
+		PHB					; Save 
 		PLA
-		STA	MU_PBR			
-		; Save 16 bit (potentially) registers
-		STX	MU_X			; Save 16 bit X
-		STY	MU_Y			; Save 16 bit Y 
-		PHD					; Save DPR (always 16 bits)
-		PLX
-		STX	MU_DP			; save the lower 8 bits
-		TSC					; Save the stack pointer to C=B|A
-		STA MU_SP			; LSB of SP
-		XBA					; Get MSB of SP
-		STA	MU_SP+1			; store MSB of SP	
+		STA	M_DBR
+		PHK
+		PLA
+		STA	M_PBR
+		; Fake up the stack to return to system monitor
+		PHP					; save flags
+		LDA	#0				; Monitor is in bank #0
+		PHA					; push PBR=0
 		LDX	#START
-		PHX					; Jump to monitor entry
-		RTI
+		PHX					; push "return address"
+		RTI					; Jump to monitor entry
+		
 
 ; Emulated BREAK exception handler:  Came from emulation mode user program!
 ; return from user code (RAM) to monitor (ROM)
-BRK_ISR_EMU
-		; Save the CPU stat
-		; Save FLAGS & C=A+B
-		PHP					; Stow flags temporarily on stack
-		CLC					; Enter native mode (must do so to set M & X flags; and to return to monitor)
-		XCE					; (E <= 0)
-		REP	#X_FLAG			; 16 bit index, binary mode
-		SEP	#M_FLAG			; 8 bit A (process byte variables)
-		; Save 8 bit registers
-		STA MU_A			; Store lower 8 bits (A)
+BRK_EMU_ISR:
+		STX	M_X
+		STZ	M_X+1			; X=8 bits, X(hi) = 0
+		STY	M_Y				; Y=8 bits, Y(hi) = 0
+		STZ	M_Y+1
+		STA	M_A				; Save A
 		XBA
-		STA	MU_B			; Store upper 8 bits (B
-		PLA					; restore flags
-		STA MU_FLAGS		; Save 8 bit flags
-		; Process the stuff from the stack (save PC, etc.)
-		
-		; end process the stuff from the stack 
-		PHB					; Save 8 bit DBR
+		STA	M_B				; Save B (B is preserved in Emulation mode!)
 		PLA
-		STA	MU_DBR			; "
-		PHK					; Save PBR
-		PLA
-		STA	MU_PBR			
-		; Save 16 bit (potentially) registers
-		STX	MU_X			; Save 16 bit X
-		STY	MU_Y			; Save 16 bit Y 
-		PHD					; Save DPR (always 16 bits)
-		PLX
-		STX	MU_DP			; save the lower 8 bits
-		TSC					; Save the stack pointer to C=B|A
-		STA MU_SP			; LSB of SP
-		XBA					; Get MSB of SP
-		STA	MU_SP+1			; store MSB of SP	
-		LDX	#START
-		PHX					; Jump to monitor entry
-		RTI
+		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
+		LDA	#$FF			; Set M_EFLAG to indicate we came from emulation mode
+		STA	M_EFLAG			; E=0; we came from native mode
+		;;;;
+		;RTI
 
 ; [03][start-address-low][start-address-high][start-address-high]	
 GO_CMD	JSR	SEND_ACK
@@ -579,7 +546,7 @@ NCOP
 		.word	START		; COP exception in native mode
 * = $FFE6
 NBRK	
-		.word	BRK_ISR_NATIVE		; BRK in native mode
+		.word	BRK_NAT_ISR		; BRK in native mode
 * = $FFE8
 NABORT	
 		.word	START
@@ -604,7 +571,7 @@ ERESET
 		.word	START		; RESET exception in all modes
 * = $FFFE
 EIRQ	
-		.word	BRK_ISR_EMU		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
+		.word	BRK_EMU_ISR		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
 
 .end					; finally.  das Ende.  Fini.  It's over.  Go home!
 
