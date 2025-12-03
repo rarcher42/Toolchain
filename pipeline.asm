@@ -68,6 +68,14 @@ CNT_L	.byte	?				; Must be 16 bits to transfer 16 bit index register
 CNT_H	.byte	?
 CNT		= CNT_L
 
+; Breakpoint logic
+BK_ADL	.byte	?
+BK_ADH	.byte	?
+BK_B	.byte	?
+BK_PTR	= BK_ADL				; Where is the breakpoint
+BK_L	.byte	?				; Replaced low byte original contents
+BK_H	.byte	?				; Replaced high byte original contents
+
 TEMP	.byte	?
 
 *		= $0200
@@ -326,12 +334,51 @@ WR_BN1	LDA	CMD_BUF,X		; Get the next buffer byte
 		RTS
 	
 
-; BREAK exception handler:  return from user code (RAM) to monitor (ROM)
-BRK_ISR
+; Native BREAK exception handler:  Came from native mode user program!
+; return from user code (RAM) to monitor (ROM)
+BRK_ISR_NATIVE
 		; Save the CPU stat
 		; Save FLAGS & C=A+B
 		PHP					; Stow flags temporarily on stack
-		CLC					; Enter native mode
+		REP	#X_FLAG			; 16 bit index, binary mode
+		SEP	#M_FLAG			; 8 bit A (process byte variables)
+		; Save 8 bit registers
+		STA MU_A			; Store lower 8 bits (A)
+		XBA
+		STA	MU_B			; Store upper 8 bits (B
+		PLA					; restore flags
+		STA MU_FLAGS		; Save 8 bit flags
+		; Process the stuff from the stack (save user PC (where BRK was), etc.)
+		; Note: monitor has to restore instruction bytes overwritten by BRK before here too!
+		
+		; end process the stuff from the stack 
+		PHB					; Save 8 bit DBR
+		PLA
+		STA	MU_DBR			; "
+		PHK					; Save PBR
+		PLA
+		STA	MU_PBR			
+		; Save 16 bit (potentially) registers
+		STX	MU_X			; Save 16 bit X
+		STY	MU_Y			; Save 16 bit Y 
+		PHD					; Save DPR (always 16 bits)
+		PLX
+		STX	MU_DP			; save the lower 8 bits
+		TSC					; Save the stack pointer to C=B|A
+		STA MU_SP			; LSB of SP
+		XBA					; Get MSB of SP
+		STA	MU_SP+1			; store MSB of SP	
+		LDX	#START
+		PHX					; Jump to monitor entry
+		RTI
+
+; Emulated BREAK exception handler:  Came from emulation mode user program!
+; return from user code (RAM) to monitor (ROM)
+BRK_ISR_EMU
+		; Save the CPU stat
+		; Save FLAGS & C=A+B
+		PHP					; Stow flags temporarily on stack
+		CLC					; Enter native mode (must do so to set M & X flags; and to return to monitor)
 		XCE					; (E <= 0)
 		REP	#X_FLAG			; 16 bit index, binary mode
 		SEP	#M_FLAG			; 8 bit A (process byte variables)
@@ -340,7 +387,10 @@ BRK_ISR
 		XBA
 		STA	MU_B			; Store upper 8 bits (B
 		PLA					; restore flags
-		STA MM_FLAGS		; Save 8 bit flags
+		STA MU_FLAGS		; Save 8 bit flags
+		; Process the stuff from the stack (save PC, etc.)
+		
+		; end process the stuff from the stack 
 		PHB					; Save 8 bit DBR
 		PLA
 		STA	MU_DBR			; "
@@ -369,7 +419,6 @@ GO_CMD	JSR	SEND_ACK
 		STA	EA_H
 		LDA	CMD_BUF+3
 		STA	EA_B
-		JSR	SAVSX0M1		; Save context to mirror register set in memory
 		; Done saving context
 		JML [EA_PTR]
 
@@ -530,7 +579,7 @@ NCOP
 		.word	START		; COP exception in native mode
 * = $FFE6
 NBRK	
-		.word	BRK_ISR		; BRK in native mode
+		.word	BRK_ISR_NATIVE		; BRK in native mode
 * = $FFE8
 NABORT	
 		.word	START
@@ -555,7 +604,7 @@ ERESET
 		.word	START		; RESET exception in all modes
 * = $FFFE
 EIRQ	
-		.word	BRK_ISR		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
+		.word	BRK_ISR_EMU		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
 
 .end					; finally.  das Ende.  Fini.  It's over.  Go home!
 
