@@ -71,17 +71,18 @@ CNT		= CNT_L
 TEMP	.byte	?
 
 *		= $0200
-; Mirror the monitor state
-MM_FLAGS 
+; Mirror the user state upon BRK/COP exit state
+MU_FLAGS 
 		.byte	?				; 8 bits
-MM_A	.byte	?				; Always 8 bits in monitor mode
-MM_B	.byte	?				; Always 8 bits in monitor mode
-MM_DBR	.byte	?				; Always 8 bits
-MM_X	.word	?				; 16 bits in monitor mode
-MM_Y	.word 	?				; 16 bits in monitor mode
-MM_DP	.word	?				; 16 bits
-MM_SP	.word	?				; 16 bits in monitor mode
-MM_PBR	.byte	?				; 8 bits
+MU_A	.byte	?				; lower 8 bits of A
+MU_B	.byte	?				; B/upper 8 bits of A
+MU_DBR	.byte	?				; Always 8 bits
+MU_X	.word	?				; Always save as 16 bits
+MU_Y	.word 	?				; Always save as 16 bits
+MU_DP	.word	?				; Always 16 bits
+MU_SP	.word	?				; Always save as 16 bits
+MU_PBR	.byte	?				; Always 8 bits
+MU_PC	.word	?
 	
 		
 
@@ -112,7 +113,7 @@ START
 		JSR	PUTSY
 CMD_INIT 	
 		JSR	INIT_CMD_PROC			; Prepare processor state machine
-CMD_LOOP	
+CMD_LOOP
 		JSR	CMD_PROC			; Run processor state machine
 		BRA	CMD_LOOP			; then do it some more
 
@@ -122,7 +123,7 @@ VER_MSG
 		.text  	"************************",CR,LF
 		.text	"*     BinMon v0.1      *",CR,LF
 		.text	"*     Ross Archer      *",CR,LF
-		.text	"*   MIT Licensce Use   *",CR,LF
+		.text	"*   MIT License Use    *",CR,LF
 		.text	"*   27 November 2025   *",CR,LF
 		.text	"************************",CR,LF
 		.text	0
@@ -325,92 +326,41 @@ WR_BN1	LDA	CMD_BUF,X		; Get the next buffer byte
 		RTS
 	
 
-; Save state when E=0, X=1 , M=1: No emulation mode, 8 bit index, 8 bit A and M
-SAVSX1M1
-		; Save the CPU state (Note: X_FLAG=0 *16 bit index), M=1 (8 bit accumulator
+; BREAK exception handler:  return from user code (RAM) to monitor (ROM)
+BRK_ISR
+		; Save the CPU stat
+		; Save FLAGS & C=A+B
 		PHP					; Stow flags temporarily on stack
-		STA MM_A			; Store lower 8 bits (A)
+		CLC					; Enter native mode
+		XCE					; (E <= 0)
+		REP	#X_FLAG			; 16 bit index, binary mode
+		SEP	#M_FLAG			; 8 bit A (process byte variables)
+		; Save 8 bit registers
+		STA MU_A			; Store lower 8 bits (A)
 		XBA
-		STA	MM_B			; Store B
+		STA	MU_B			; Store upper 8 bits (B
 		PLA					; restore flags
 		STA MM_FLAGS		; Save 8 bit flags
-		STX	MM_X			; Save 16 bit X
-		STZ MM_X+1			; No upper byte of X
-		STY	MM_Y			; Save 16 bit Y
-		STZ	MM_Y+1			; No upper byte of Y
 		PHB					; Save 8 bit DBR
 		PLA
-		STA	MM_DBR			; "
-		PHD					; Save DPR (always 16 bits)
-		PLA
-		STA	MM_DP			; save the lower 8 bits
-		PLA
-		STA	MM_DP+1			; save the upper 8 bits
-		TSC					; Save the stack pointer to C=B|A
-		STA MM_SP			; LSB of SP
-		XBA					; Get MSB of SP
-		STA	MM_SP+1			; store MSB of SP
+		STA	MU_DBR			; "
 		PHK					; Save PBR
 		PLA
-		STA	MM_PBR			
-		RTS	
-; Save state when E=0, X=0 , M=1: No emulation mode, 16 bit index, 8 bit A and M
-SAVSX0M1
-		; Save the CPU state (Note: X_FLAG=0 *16 bit index), M=1 (8 bit accumulator
-		PHP					; Stow flags temporarily on stack
-		STA MM_A			; Store lower 8 bits (A)
-		XBA
-		STA	MM_B			; Store upper 8 bits (B
-		PLA					; restore flags
-		STA MM_FLAGS		; Save 8 bit flags
-		STX	MM_X			; Save 16 bit X
-		STY	MM_Y			; Save 16 bit Y 
-		PHB					; Save 8 bit DBR
-		PLA
-		STA	MM_DBR			; "
+		STA	MU_PBR			
+		; Save 16 bit (potentially) registers
+		STX	MU_X			; Save 16 bit X
+		STY	MU_Y			; Save 16 bit Y 
 		PHD					; Save DPR (always 16 bits)
-		PLA
-		STA	MM_DP			; save the lower 8 bits
-		PLA
-		STA	MM_DP+1			; save the upper 8 bits
+		PLX
+		STX	MU_DP			; save the lower 8 bits
 		TSC					; Save the stack pointer to C=B|A
-		STA MM_SP			; LSB of SP
+		STA MU_SP			; LSB of SP
 		XBA					; Get MSB of SP
-		STA	MM_SP+1			; store MSB of SP
-		PHK					; Save PBR
-		PLA
-		STA	MM_PBR			
-		RTS
-		
-; Save state when E=0, X=0 , M=0: No emulation mode, 16 bit index, 16 bit A and M
-SAVSX0M0
-		; Save the CPU state (Note: X_FLAG=0 *16 bit index), M=1 (8 bit accumulator
-		PHP					; Stow flags temporarily on stack
-		STA MM_A			; Store 16 bit A in MM_B, MM_A	; Note: memory order must be MM_B=MM_A+1!
-		; Now make A 8 bits (will be restored back to 16 bits in RESSX0M0)
-		SEP #M_FLAG			; A = 8 bits now
-		PLA	                ; restore flags
-		AND #~M_FLAG		; clear M flag but leave A as 8 bits
-		STA MM_FLAGS		; Save 8 bit flags (pretending M=0)
-		STX	MM_X			; Save 16 bit X
-		STY	MM_Y			; Save 16 bit Y 
-		PHB					; Save 8 bit DBR
-		PLA
-		STA	MM_DBR			; "
-		PHD					; Save DPR (always 16 bits)
-		PLA
-		STA	MM_DP			; save the lower 8 bits
-		PLA
-		STA	MM_DP+1			; save the upper 8 bits
-		TSC					; Save the stack pointer to C=B|A
-		STA MM_SP			; LSB of SP
-		XBA					; Get MSB of SP
-		STA	MM_SP+1			; store MSB of SP
-		PHK					; Save PBR
-		PLA
-		STA	MM_PBR	
-		REP #M_FLAG			; restore 16 bit A mode
-		RTS
+		STA	MU_SP+1			; store MSB of SP	
+		LDX	#START
+		PHX					; Jump to monitor entry
+		RTI
+
 ; [03][start-address-low][start-address-high][start-address-high]	
 GO_CMD	JSR	SEND_ACK
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
@@ -580,7 +530,7 @@ NCOP
 		.word	START		; COP exception in native mode
 * = $FFE6
 NBRK	
-		.word	START		; BRK in native mode
+		.word	BRK_ISR		; BRK in native mode
 * = $FFE8
 NABORT	
 		.word	START
@@ -589,7 +539,7 @@ NNMI
 		.word	NMI_ISR		; NMI interrupt in native mode
 * = $FFEE
 NIRQ	
-		.word	IRQ_ISR 
+		.word	IRQ_ISR 	; 
 
 * = $FFF4
 ECOP	
@@ -605,7 +555,7 @@ ERESET
 		.word	START		; RESET exception in all modes
 * = $FFFE
 EIRQ	
-		.word	START
+		.word	BRK_ISR		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
 
 .end					; finally.  das Ende.  Fini.  It's over.  Go home!
 
