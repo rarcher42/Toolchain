@@ -363,20 +363,52 @@ BRK_NAT_ISR
 
 ; Emulated BREAK exception handler:  Came from emulation mode user program!
 ; return from user code (RAM) to monitor (ROM)
+;
+; Q: WHY are we saving registers not defined as valid in EMU mode?
+; A: Because we don't know whether future state of user task may re-enable native mode
+;    upon resuming.  And we don't NEED to simulate the behavior of various EMU->Native switches,
+;    because we have a real CPU to do it.  And the documentation is a bit fuzzy and incomplete
+;    in defining behavior.  So, the cautious thing to do is save everything, and let the CPU's
+;    logic wipe out or preserve these values upon mode switch.
+;    
+; Note:  M_EFLAG tells register dump which subset of saved registers to print as currently active...
+;        achieving correctness and context objectives.
 BRK_EMU_ISR:
+		REP	#X_FLAG			; 16 bit index, binary mode
+		SEP	#M_FLAG			; 8 bit A (process byte variables)
 		STX	M_X
-		STZ	M_X+1			; X=8 bits, X(hi) = 0
-		STY	M_Y				; Y=8 bits, Y(hi) = 0
-		STZ	M_Y+1
-		STA	M_A				; Save A
+		STY	M_Y
+		STA	M_A
 		XBA
-		STA	M_B				; Save B (B is preserved in Emulation mode!)
+		STA	M_B
 		PLA
 		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
-		LDA	#$FF			; Set M_EFLAG to indicate we came from emulation mode
-		STA	M_EFLAG			; E=0; we came from native mode
-		;;;;
-		;RTI
+		LDA	#$FF
+		STA	M_EFLAG			; E=1; we came from Emulation mode
+		PLX					; Pull PC15..0 return address off stack
+		DEX					; points one past BRK... restore to point to BRK for continue
+		STX	M_PC			; save PC=*(BRK instruction)
+		PHB					; Get PBR, which is probably nonsense or left-over native context but 
+		PLA					; it doesn't hurt to preserve its state.
+		STA	M_PBR			; Probably garbage, but slightly possibly holding future context 
+		TSX					; Now we're pulled everything off stack - it's pre-BRK position
+		STX	M_SP
+		PHD					; save DPR (zero page pointer).  Again, precautionary context save, 
+		PLX					; probably not important to user process (unless maybe it switches to native 			
+		STX	M_DPR			; at some point when it resumes.
+		PHB					; Save 
+		PLA
+		STA	M_DBR
+		PHK
+		PLA
+		STA	M_PBR
+		; Fake up the stack to return to system monitor
+		PHP					; save flags
+		LDA	#0				; Monitor is in bank #0
+		PHA					; push PBR=0
+		LDX	#START
+		PHX					; push "return address"
+		RTI					; Jump to monitor entry
 
 ; [03][start-address-low][start-address-high][start-address-high]	
 GO_CMD	JSR	SEND_ACK
