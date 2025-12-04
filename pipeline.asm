@@ -44,8 +44,10 @@ MASK7		= %10000000
 
 ; Flag definition to OR for SEP, REP
 N_FLAG		= MASK7
-M_FLAG		= MASK6
+V_FLAG		= MASK6
+M_FLAG		= MASK5
 X_FLAG		= MASK4
+BRK_FLAG	= MASK4				; Emulation mode 
 D_FLAG		= MASK3
 I_FLAG		= MASK2
 Z_FLAG		= MASK1
@@ -359,7 +361,9 @@ BRK_NAT_ISR
 		LDX	#START
 		PHX					; push "return address"
 		RTI					; Jump to monitor entry
-		
+
+IRQ_EMU_ISR
+		RTI
 
 ; Emulated BREAK exception handler:  Came from emulation mode user program!
 ; return from user code (RAM) to monitor (ROM)
@@ -373,14 +377,24 @@ BRK_NAT_ISR
 ;    
 ; Note:  M_EFLAG tells register dump which subset of saved registers to print as currently active...
 ;        achieving correctness and context objectives.
-BRK_EMU_ISR:
+BRK_IRQ_EMU
+		STA	M_A				; Save A and B
+		XBA
+		STA	M_B
+		PLA					; get flags from stack
+		PHA					; and put them back!
+		AND	#BRK_FLAG		; Check for BRK flag
+		BNE	BRK_CONT		; continue break handling
+		LDA	M_B				; restore A & B 
+		XBA
+		LDA	M_A
+		JMP	IRQ_EMU_ISR		; EMU mode IRQ handler
+BRK_CONT
 		REP	#X_FLAG			; 16 bit index, binary mode
 		SEP	#M_FLAG			; 8 bit A (process byte variables)
 		STX	M_X
 		STY	M_Y
-		STA	M_A
-		XBA
-		STA	M_B
+		
 		PLA
 		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
 		LDA	#$FF
@@ -603,7 +617,7 @@ ERESET
 		.word	START		; RESET exception in all modes
 * = $FFFE
 EIRQ	
-		.word	BRK_EMU_ISR		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
+		.word	BRK_IRQ_EMU		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
 
 .end					; finally.  das Ende.  Fini.  It's over.  Go home!
 
