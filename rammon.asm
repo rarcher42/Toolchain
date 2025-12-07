@@ -76,23 +76,6 @@ SIZE_CMD_BUF	= 512			; maximum command length
 CMD_BUF		
 		.fill	SIZE_CMD_BUF
 
-* 		= $7E00				
-;
-; Mirror the user state upon BRK exit state
-M_B		.byte	?				; B/upper 8 bits of A
-M_A		.byte	?				; lower 8 bits of A
-M_X		.word	?				; Always save as 16 bits
-M_Y		.word 	?				; Always save as 16 bits
-M_PC	.word	?
-M_DBR	.byte	?			; Always 8 bits
-
-M_DPR	.word	?			; Always 16 bits
-M_SP	.word	?			; Always save as 16 bits
-M_PBR	.byte	?			; Always 8 bits
-M_EFLAG	
-		.byte	?			; Track the mode we came from re-entering the monitor	
-M_FLAGS 				
-		.byte	?			; 8 bits
 
 * = $2000
 		.xl

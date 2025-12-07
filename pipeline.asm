@@ -93,12 +93,11 @@ M_B		.byte	?				; B/upper 8 bits of A
 M_A		.byte	?				; lower 8 bits of A
 M_X		.word	?				; Always save as 16 bits
 M_Y		.word 	?				; Always save as 16 bits
-M_PC	.word	?
-M_DBR	.byte	?			; Always 8 bits
-
-M_DPR	.word	?			; Always 16 bits
-M_SP	.word	?			; Always save as 16 bits
-M_PBR	.byte	?			; Always 8 bits
+M_PC		.word	?
+M_DPR		.word	?			; Always 16 bits
+M_SP		.word	?			; Always save as 16 bits
+M_PBR		.byte	?			; Always 8 bits
+M_DBR           .byte   ?                       ; Always 8 bits
 M_EFLAG	
 		.byte	?			; Track the mode we came from re-entering the monitor	
 M_FLAGS 				
@@ -585,11 +584,11 @@ BRK_CONT
 		SEC
 		SBC	#$02			; Subtract 2 from low address
 		STA	M_PC			; store as low PC
-		STA EA_L
+		STA 	EA_L
 		PLA					; Get high PC PLA sets N and Z but leaves C alone fortunately
 		SBC	#$00			; take care of any borrow from low PC
 		STA	M_PC+1			; 
-		STA EA_H
+		STA 	EA_H
 		; Restore the instruction overwritten by BRK
 		LDY	#$00
 		LDA	BP_SAVE
@@ -622,6 +621,62 @@ IRQ_EMU_ISR
 		
 		.xl
 		.as
+
+; Restore machine to user context
+RESTORE		LDA	M_EFLAG				; emulation mode?
+		BEQ	RESNN				; If 0, we're restoring to a native context
+; Restore machine to user emulation context
+RESNE	
+		.xs
+		.as
+		SEP	#(X_FLAG | M_FLAG)
+		REP	#D_FLAG
+		SEC
+		XCE					; we're in emulation mode, 8 bit everything
+		LDX	M_SP				; only LSByte matters
+		TXS					; Now in target stack context (but Ok to add below/free)
+		LDA	M_PC+1
+		PHA
+		LDA	M_PC
+		PHA
+		LDA	M_FLAGS
+		PHA
+		LDA     M_B
+                XBA
+		LDA	M_A
+		LDX	M_X
+		LDY	M_Y
+		RTI					; RTI(16)
+; Restore machine to user native context
+RESNN
+		.xl
+		.as
+		REP     #(X_FLAG | D_FLAG)              ; 16 bit index, binary mode
+                SEP     #M_FLAG                         ; 8 bit A (process byte stream)
+		LDX	M_SP
+		TXS					; Restore the stack - target stack but we're pointing to free space so OK
+		LDA	M_PBR		; Push Program Bank #
+		PHA
+		LDX	M_PC		; Push PC
+		PHX			; 
+		LDA	M_FLAGS
+		PHA			; Flags
+		LDA	M_DBR		; Data bank register
+		PHA			; Last thing off stack before RTI
+		LDA	M_B
+		XBA
+		LDA	M_A
+		PHA
+		LDX	M_DPR
+		PHX
+                LDX	M_X
+		PHX
+		LDY	M_Y
+		PLX
+		PLD
+		PLA
+		PLB			; Update data bank register last
+		RTI			; RTI(24) Must use RTI to restore flags & Full 24 bit PC.  No other way!(?)
 
 ;;; Exception / Reset / Interrupt vectors in native and emulation mode
 * = $FFE4
