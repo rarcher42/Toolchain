@@ -54,6 +54,9 @@ Z_FLAG		= MASK1
 C_FLAG		= MASK0
 
 * 		= $40					; Zero page assignments
+;
+
+;
 CMD_STATE	
 		.byte	?				; CMD_PROC state
 CMD_ERROR	
@@ -71,12 +74,10 @@ CNT_H	.byte	?
 CNT		= CNT_L
 
 ; Breakpoint logic
-BK_ADL	.byte	?
-BK_ADH	.byte	?
-BK_B	.byte	?
-BK_PTR	= BK_ADL				; Where is the breakpoint
-BK_L	.byte	?				; Replaced low byte original contents
-BK_H	.byte	?				; Replaced high byte original contents
+; Note: At present we're not keeping history or list of breakpoints.  Either the PC side will have to remember
+; all the breakpoints and do the overwritten byte restores itself, OR limit to one active breakpoint at a time.
+; Since our first application is simply single-stepping, one one-shot breakpoint at a time is useful enough to get going.
+BP_SAVE	.byte	?				; Replaced low byte original contents
 
 TEMP	.byte	?
 
@@ -86,23 +87,26 @@ SIZE_CMD_BUF	= 512			; maximum command length
 CMD_BUF		
 		.fill	SIZE_CMD_BUF
 
-STACKTOP	= $7CFF				; Top of RAM (I/O 0x7F00-0x7FFF)
-MON_DP		= $7D00				; Monitor direct page @ $7D00-$7DFF
-*			= $7E00
-; Mirror the user state upon BRK/COP exit state
+* 		= $7E00
+; Mirror the user state upon BRK exit state
+M_B		.byte	?				; B/upper 8 bits of A
+M_A		.byte	?				; lower 8 bits of A
+M_X		.word	?				; Always save as 16 bits
+M_Y		.word 	?				; Always save as 16 bits
+M_PC	.word	?
+M_DBR	.byte	?			; Always 8 bits
+
+M_DPR	.word	?			; Always 16 bits
+M_SP	.word	?			; Always save as 16 bits
+M_PBR	.byte	?			; Always 8 bits
 M_EFLAG	
 		.byte	?			; Track the mode we came from re-entering the monitor	
 M_FLAGS 				
 		.byte	?			; 8 bits
-M_A	.byte	?				; lower 8 bits of A
-M_B	.byte	?				; B/upper 8 bits of A
-M_DBR	.byte	?			; Always 8 bits
-M_X	.word	?				; Always save as 16 bits
-M_Y	.word 	?				; Always save as 16 bits
-M_DPR	.word	?			; Always 16 bits
-M_SP	.word	?			; Always save as 16 bits
-M_PBR	.byte	?			; Always 8 bits
-M_PC	.word	?
+
+
+STACKTOP	= $7CFF				; Top of RAM (I/O 0x7F00-0x7FFF)
+
 
 
 * = $F800
@@ -113,10 +117,7 @@ START
 		CLC					; Enter native 65c816 mode
 		XCE					; 
 		REP	#(X_FLAG | D_FLAG)		; 16 bit index, binary mode
-		SEP	#M_FLAG				; 8 bit A (process byte stream) 
-		LDX	#MON_DP				; Set direct page to $7E00
-		PHX
-		PLD						; DP now at $7E00
+		SEP	#M_FLAG				; 8 bit A (process byte stream)
 		LDX	#STACKTOP			; Set 16bit SP to usable RAMtop
 		TXS						; Set up the stack pointer
 		JSR	INIT_FIFO			; initialize FIFO
@@ -127,7 +128,6 @@ CMD_INIT
 CMD_LOOP
 		JSR	CMD_PROC			; Run processor state machine
 		BRA	CMD_LOOP			; then do it some more
-
 
 VER_MSG
 		.text	CR,LF
@@ -265,7 +265,10 @@ PCBC1	CMP	#2
 PCBC2	CMP	#3
 		BNE	PCBC3
 		JMP	GO_CMD
-PCBC3	CMP	#'E'				; echo command
+PCBC3	CMP	#4					; set (volatile) Breakpoint
+		BNE	PCBC4
+		JMP	SET_BP_CMD			; Breakpoint command	
+PCBC4	CMP	#'E'				; echo command
 		BNE	PCBERR
 		JMP	ECHO_CMD
 PCBERR	JSR	SEND_NAK			; Unknown cmd
@@ -325,105 +328,6 @@ WR_BN1	LDA	CMD_BUF,X		; Get the next buffer byte
 		RTS
 	
 
-; Native BREAK exception handler:  Came from native mode user program!
-; return from user code (RAM) to monitor (ROM)
-BRK_NAT_ISR
-		REP	#X_FLAG			; 16 bit index, binary mode
-		SEP	#M_FLAG			; 8 bit A (process byte variables)
-		STX	M_X
-		STY	M_Y
-		STA	M_A
-		XBA
-		STA	M_B
-		PLA
-		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
-		STZ	M_EFLAG			; E=0; we came from native mode
-		PLX					; Pull PC15..0 return address off stack
-		DEX					; points one past BRK... restore to point to BRK for continue
-		STX	M_PC			; save PC=*(BRK instruction)
-		PLA					; Get PBR of code
-		STA	M_PBR
-		TSX					; Now we're pulled everything off stack - it's pre-BRK position
-		STX	M_SP
-		PHD					; save DPR (zero page pointer)
-		PLX					
-		STX	M_DPR
-		PHB					; Save 
-		PLA
-		STA	M_DBR
-		PHK
-		PLA
-		STA	M_PBR
-		; Fake up the stack to return to system monitor
-		PHP					; save flags
-		LDA	#0				; Monitor is in bank #0
-		PHA					; push PBR=0
-		LDX	#START
-		PHX					; push "return address"
-		RTI					; Jump to monitor entry
-
-IRQ_EMU_ISR
-		RTI
-
-; Emulated BREAK exception handler:  Came from emulation mode user program!
-; return from user code (RAM) to monitor (ROM)
-;
-; Q: WHY are we saving registers not defined as valid in EMU mode?
-; A: Because we don't know whether future state of user task may re-enable native mode
-;    upon resuming.  And we don't NEED to simulate the behavior of various EMU->Native switches,
-;    because we have a real CPU to do it.  And the documentation is a bit fuzzy and incomplete
-;    in defining behavior.  So, the cautious thing to do is save everything, and let the CPU's
-;    logic wipe out or preserve these values upon mode switch.
-;    
-; Note:  M_EFLAG tells register dump which subset of saved registers to print as currently active...
-;        achieving correctness and context objectives.
-BRK_IRQ_EMU
-		STA	M_A				; Save A and B
-		XBA
-		STA	M_B
-		PLA					; get flags from stack
-		PHA					; and put them back!
-		AND	#BRK_FLAG		; Check for BRK flag
-		BNE	BRK_CONT		; continue break handling
-		LDA	M_B				; restore A & B 
-		XBA
-		LDA	M_A
-		JMP	IRQ_EMU_ISR		; EMU mode IRQ handler
-BRK_CONT
-		REP	#X_FLAG			; 16 bit index, binary mode
-		SEP	#M_FLAG			; 8 bit A (process byte variables)
-		STX	M_X
-		STY	M_Y
-		
-		PLA
-		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
-		LDA	#$FF
-		STA	M_EFLAG			; E=1; we came from Emulation mode
-		PLX					; Pull PC15..0 return address off stack
-		DEX					; points one past BRK... restore to point to BRK for continue
-		STX	M_PC			; save PC=*(BRK instruction)
-		PHB					; Get PBR, which is probably nonsense or left-over native context but 
-		PLA					; it doesn't hurt to preserve its state.
-		STA	M_PBR			; Probably garbage, but slightly possibly holding future context 
-		TSX					; Now we're pulled everything off stack - it's pre-BRK position
-		STX	M_SP
-		PHD					; save DPR (zero page pointer).  Again, precautionary context save, 
-		PLX					; probably not important to user process (unless maybe it switches to native 			
-		STX	M_DPR			; at some point when it resumes.
-		PHB					; Save 
-		PLA
-		STA	M_DBR
-		PHK
-		PLA
-		STA	M_PBR
-		; Fake up the stack to return to system monitor
-		PHP					; save flags
-		LDA	#0				; Monitor is in bank #0
-		PHA					; push PBR=0
-		LDX	#START
-		PHX					; push "return address"
-		RTI					; Jump to monitor entry
-
 ; [03][start-address-low][start-address-high][start-address-high]	
 GO_CMD	JSR	SEND_ACK
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
@@ -434,6 +338,21 @@ GO_CMD	JSR	SEND_ACK
 		STA	EA_B
 		; Done saving context
 		JML [EA_PTR]
+		
+; [04][start-address-low][start-address-high][start-address-high]	
+SET_BP_CMD	
+		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
+		STA	EA_L
+		LDA	CMD_BUF+2
+		STA	EA_H
+		LDA	CMD_BUF+3
+		STA	EA_B
+		LDA	[EA_PTR]		; Get instruction at [EA_PTR]
+		STA	BP_SAVE			; Note: one volatile breakpoint only at present.  We'll have to revisit.
+		LDA	#$00			; BRK instruction (can't STZ indirect long)
+		STA [EA_PTR]		; Save a BRK there
+		JSR	SEND_ACK
+		RTS
 
 ECHO_CMD
 		LDA	#SOF
@@ -448,11 +367,6 @@ EC_CM1	LDA	CMD_BUF,X
 		JSR	PUTCH
 		RTS
 
-NMI_ISR 	
-		RTI
-
-IRQ_ISR 	
-		RTI
 
 ;;;; ============================= New FIFO functions ======================================
 ; Initializes the system VIA (the USB debugger), and syncs with the USB chip.
@@ -581,10 +495,133 @@ PUTSXL1
 PUTSY1 		
 		RTS 
 ;
+; Native BREAK exception handler:  Came from native mode user program!
+; return from user code (RAM) to monitor (ROM)
+BRK_NAT_ISR
+		REP	#X_FLAG			; 16 bit index, binary mode
+		SEP	#M_FLAG			; 8 bit A (process byte variables)
+		STX	M_X
+		STY	M_Y
+		STA	M_A
+		XBA
+		STA	M_B
+		PLA
+		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
+		STZ	M_EFLAG			; E=0; we came from native mode
+		PLX					; Pull PC15..0 return address off stack
+		DEX					; points past BRK... restore to point to BRK for continue
+		DEX					; " Now we're pointing at BRK.  Handler should restore the byte here
+		STX	M_PC			; save PC=*(BRK instruction)
+		; Restore original instruction byte overritten by BRK!
+		LDA M_PC
+		STA	EA_L
+		LDA	M_PC+1
+		STA	EA_H
+		LDA	#0				; FUBAR - revisit Bank != 0 case
+		STA	EA_B
+		; Store it back 
+		LDA	BP_SAVE
+		STA [EA_PTR]
+		; End restore instruction byte
+		PLA					; Get PBR of code
+		STA	M_PBR
+		TSX					; Now we're pulled everything off stack - it's pre-BRK position
+		STX	M_SP
+		PHD					; save DPR (zero page pointer)
+		PLX					
+		STX	M_DPR
+		PHB					; Save 
+		PLA
+		STA	M_DBR
+		PHK
+		PLA
+		STA	M_PBR
+		; Fake up the stack to return to system monitor
+		LDA	#0				; Monitor is in bank #0
+		PHA					; push PBR=0
+		LDX	#START
+		PHX					; push "return address"
+		PHP					; save flags
+		RTI					; Jump to monitor entry
+
+NMI_ISR 	
+		RTI
+
+IRQ_ISR 	
+		RTI
+		
+		
+		
+	.xs
+	.as
+; Emulated BREAK exception handler:  Came from emulation mode user program!
+; return from user code (RAM) to monitor (ROM)
+;    
+; Note:  M_EFLAG tells register dump which registers should be ignored
 ;
-
-
-
+; FIXME:  MUST do a check for BRK flag on stack and divert to IRQ emulation handler before
+; using IRQs, e.g.
+;
+BRK_IRQ_EMU
+		STA	M_A				; Save A and B
+		XBA
+		STA	M_B
+		PLA					; get flags from stack
+		PHA					; and put them back!
+		AND	#BRK_FLAG		; Check for BRK flag
+		BNE	BRK_CONT		; continue break handling
+		LDA	M_B				; restore A & B 
+		XBA
+		LDA	M_A
+		BRA	IRQ_EMU_ISR		; EMU mode IRQ handler
+BRK_CONT
+		PLA					; Get flags off stack 
+		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
+		STX	M_X
+		STZ	M_X+1
+		STY	M_Y
+		STZ	M_Y+1
+		PLA					; Pull PC7..0
+		SEC
+		SBC	#$02			; Subtract 2 from low address
+		STA	M_PC			; store as low PC
+		STA EA_L
+		PLA					; Get high PC PLA sets N and Z but leaves C alone fortunately
+		SBC	#$00			; take care of any borrow from low PC
+		STA	M_PC+1			; 
+		STA EA_H
+		; Restore the instruction overwritten by BRK
+		LDY	#$00
+		LDA	BP_SAVE
+		STA	(EA_PTR)		; restore the byte
+		; end restore
+		LDA	#$FF
+		STA	M_EFLAG			; E=1; we came from Emulation mode
+		STZ	M_PBR			; Probably garbage, but slightly possibly holding future context 
+		TSX					; Now we're pulled everything off stack - it's pre-BRK position
+		STX	M_SP
+		LDA	#$01
+		STA	M_SP+1
+		PHD					; save DPR (zero page pointer).  Again, precautionary context save, 
+		PLA					; probably not important to user process (unless maybe it switches to native 			
+		STA	M_DPR+1			; at some point when it resumes.
+		PLA
+		STA	M_DPR
+		STZ	M_DBR
+		STZ	M_PBR
+		; Fake up the stack to return to system monitor
+		LDA	#>START
+		PHA
+		LDA	#<START
+		PHA
+		PHP
+		RTI				
+		
+IRQ_EMU_ISR
+		RTI
+		
+		.xl
+		.as
 
 ;;; Exception / Reset / Interrupt vectors in native and emulation mode
 * = $FFE4

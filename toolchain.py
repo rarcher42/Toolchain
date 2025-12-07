@@ -199,18 +199,6 @@ class CPU_Pipe:
         time.sleep(5.0)                 # Allow transferred program time to generate output for us (if any)
         return self.fifo.read()         # Return target program's initial output
     
-    def set_breakpoint(self, sa_24):
-        sab = ((sa_24 >> 16) & 0xFF).to_bytes(1, 'little')
-        sah = ((sa_24 >> 8) & 0xFF).to_bytes(1, 'little')
-        sal = ((sa_24) & 0xFF).to_bytes(1, 'little')
-        cmd = b'\x04' + sal + sah + sab
-        resp = self.cmd_dialog(cmd)
-        # Should ACK the command before jumping since we don't know what will happen afterwards
-        if resp == b'\x06':
-            print("\nACK")
-        return self.fifo.read()         # Return target program's initial output
-        
-        
     def str_to_bytes(self, s):
         outb = b''
         for i in range(0, len(s), 2):
@@ -322,30 +310,18 @@ def test_go(address):
     return
     
 if __name__ == "__main__":
-    pipe = CPU_Pipe('COM4', 921600)
    
-    context_addr = 0x7e00
-    bp_addr = 0x002011
+    pipe = CPU_Pipe('COM4', 921600)
+    '''
     pipe.send_srec("rammon.hex")
-    # Read byte at bp addr before set bp
-    print("before")
-    mem = pipe.read_mem(bp_addr, 1)
-    dump_hex(bp_addr, mem)
-    res = pipe.set_breakpoint(bp_addr)
-    print(res)
-    print("after")
-    mem = pipe.read_mem(bp_addr, 1)
-    dump_hex(bp_addr, mem)
     res = pipe.jump_long(0x002000)
     print(res)
-    print("CONTEXT")
-    mem = pipe.read_mem(context_addr, 16)
-    dump_hex(context_addr, mem)
-    print("\nINSTRUCTION RESTORED?:")
-    mem = pipe.read_mem(bp_addr, 1)
-    dump_hex(bp_addr, mem)
+    time.sleep(10.0)            # Allow user to see the display for a bit
+    '''
+    mem = pipe.read_mem(0x7D00, 32)
+    dump_hex(0x7D00, 32)
+    
     exit(0)
-   
     start_t = time.time()
     for sa in range(0, 0x010000, 256):
         mem = pipe.read_mem(sa, 256)
