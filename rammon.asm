@@ -80,15 +80,17 @@ CMD_BUF
 * = $2000
 		.xl
 		.as
-RAMSTART		
+RAMSTART	
+		SEP	#M_FLAG
+		REP #(X_FLAG | D_FLAG)
 		LDY	#DUM_MSG
 		JSR	PUTSY				; Break the code
-		LDA	#$BB
+		LDA	#$12
 		XBA
-		LDA	#$AA
-		LDX	#$1234
-		LDY	#$5678
-HERE	
+		LDA	#$34
+		LDX	#$5678
+		LDY	#$9ABC
+HERE	BRK
 		BRA	HERE				
 
 DUM_MSG:

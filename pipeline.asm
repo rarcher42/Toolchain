@@ -73,35 +73,33 @@ CNT_L	.byte	?				; Must be 16 bits to transfer 16 bit index register
 CNT_H	.byte	?
 CNT		= CNT_L
 
-; Breakpoint logic
-; Note: At present we're not keeping history or list of breakpoints.  Either the PC side will have to remember
-; all the breakpoints and do the overwritten byte restores itself, OR limit to one active breakpoint at a time.
-; Since our first application is simply single-stepping, one one-shot breakpoint at a time is useful enough to get going.
-BP_SAVE	.byte	?				; Replaced low byte original contents
-
 TEMP	.byte	?
 
 
-SIZE_CMD_BUF	= 512			; maximum command length
+SIZE_CMD_BUF	= 768			; maximum command length - pathological worst case for 256 payload bytes+
 *		= $0400					; CMD buffer
 CMD_BUF		
 		.fill	SIZE_CMD_BUF
 
 * 		= $7E00
 ; Mirror the user state upon BRK exit state
-M_B		.byte	?				; B/upper 8 bits of A
-M_A		.byte	?				; lower 8 bits of A
-M_X		.word	?				; Always save as 16 bits
-M_Y		.word 	?				; Always save as 16 bits
-M_PC		.word	?
-M_DPR		.word	?			; Always 16 bits
-M_SP		.word	?			; Always save as 16 bits
-M_PBR		.byte	?			; Always 8 bits
-M_DBR           .byte   ?                       ; Always 8 bits
+; Note: do not re-order the next 16 bytes
 M_EFLAG	
-		.byte	?			; Track the mode we came from re-entering the monitor	
+			.byte	?				; Track the mode we came from re-entering the monitor	
+M_STATE		=	M_EFLAG
 M_FLAGS 				
-		.byte	?			; 8 bits
+			.byte	?				; 8 bits
+M_A			.byte	?				; lower 8 bits of A
+M_B			.byte	?				; B/upper 8 bits of A
+M_X			.word	?				; Always save as 16 bits
+M_Y			.word 	?				; Always save as 16 bits
+M_SP		.word	?				; Always save as 16 bits
+M_DPR		.word	?			; Always 16 bits
+M_PC		.word	?
+M_PBR		.byte	?			; Always 8 bits
+M_DBR       .byte   ?                       ; Always 8 bits
+
+
 
 
 STACKTOP	= $7CFF				; Top of RAM (I/O 0x7F00-0x7FFF)
@@ -116,7 +114,9 @@ START
 		CLC					; Enter native 65c816 mode
 		XCE					; 
 		REP	#(X_FLAG | D_FLAG)		; 16 bit index, binary mode
+		.xl
 		SEP	#M_FLAG				; 8 bit A (process byte stream)
+		.as
 		LDX	#STACKTOP			; Set 16bit SP to usable RAMtop
 		TXS						; Set up the stack pointer
 		JSR	INIT_FIFO			; initialize FIFO
@@ -267,14 +267,17 @@ PCBC2	CMP	#3
 PCBC3	CMP	#4					; set (volatile) Breakpoint
 		BNE	PCBC4
 		JMP	SET_BP_CMD			; Breakpoint command	
-PCBC4	CMP	#'E'				; echo command
+PCBC4	CMP	#5					; Get registers
+		BNE	PCBC5
+		JMP	GET_CONTEXT
+PCBC5	CMP	#'E'				; echo command
 		BNE	PCBERR
 		JMP	ECHO_CMD
 PCBERR	JSR	SEND_NAK			; Unknown cmd
 		RTS
 
 
-; [01][start-address-Low][start-address-high][start-address-page][LEN_L][LEN_H]		; 
+; [01][start-address-Low][start-address-high][start-address-page][LEN]		; 
 ; Read n+1 bytes (1 to 256 inclusive) and Return
 ; X / CMD_IX is index to next byte
 RD_CMD	
@@ -287,14 +290,13 @@ RD_CMD
 		; Store 8 bit count as 16 bits for indexing
 		LDA	CMD_BUF+4
 		STA	CNT_L
-		LDA	CMD_BUF+5
-		STA	CNT_H
+		STZ	CNT_H
 		LDA	#SOF
 		JSR	PUTCH			; Unencoded SOF starts frame
-		LDY	#0
-RD_BN1	LDA	[EA_PTR],Y		; Get next byte
+		LDY	#$FFFF			; Start at -1 because we send n+1 bytes :D
+RD_BN1	INY
+		LDA	[EA_PTR],Y		; Get next byte
 		JSR	CHR_ENCODE		; Send the byte there, possibly DLE escaped as two bytes
-		INY
 		CPY	CNT				; Length word
 		BNE	RD_BN1
 RD_BX1	LDA	#EOF
@@ -328,17 +330,18 @@ WR_BN1	LDA	CMD_BUF,X		; Get the next buffer byte
 	
 
 ; [03][start-address-low][start-address-high][start-address-high]	
-GO_CMD	JSR	SEND_ACK
+GO_CMD	
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
 		STA	EA_L
 		LDA	CMD_BUF+2
 		STA	EA_H
 		LDA	CMD_BUF+3
 		STA	EA_B
-		; Done saving context
+		JSR	SEND_ACK
 		JML [EA_PTR]
 		
-; [04][start-address-low][start-address-high][start-address-high]	
+; [04][start-address-low][start-address-high][start-address-high]
+; returns: replaced byte value (caller is responsible for replacing it!)	
 SET_BP_CMD	
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
 		STA	EA_L
@@ -346,13 +349,38 @@ SET_BP_CMD
 		STA	EA_H
 		LDA	CMD_BUF+3
 		STA	EA_B
-		LDA	[EA_PTR]		; Get instruction at [EA_PTR]
-		STA	BP_SAVE			; Note: one volatile breakpoint only at present.  We'll have to revisit.
+		LDA	#SOF
+		JSR	PUTCH
+		LDA	[EA_PTR]
+		; SEND a character inter-packet (translating)
+		JSR	CHR_ENCODE
+		LDA	#EOF
+		JSR	PUTCH
 		LDA	#$00			; BRK instruction (can't STZ indirect long)
 		STA [EA_PTR]		; Save a BRK there
-		JSR	SEND_ACK
 		RTS
 
+; [05] GETCONTEXT
+; Returns saved registers in block order 
+; Returns [E-flag][Flags][A][B][XL][XH][YL][YH][SPL][SPH][DPRL][DPRH][PCL][PCH][PBR][DBR]
+GET_CONTEXT
+	LDA	#SOF
+	JSR	PUTCH
+	LDX	#0
+SSNC1
+	LDA	M_STATE,X
+	JSR	CHR_ENCODE
+	INX
+	CPX	#16
+	BNE	SSNC1
+	LDA	#EOF
+	JSR	PUTCH
+	RTS
+		
+		
+
+; ['E'][data]
+; replies [data]
 ECHO_CMD
 		LDA	#SOF
 		JSR	PUTCH
@@ -366,6 +394,9 @@ EC_CM1	LDA	CMD_BUF,X
 		JSR	PUTCH
 		RTS
 
+
+
+	
 
 ;;;; ============================= New FIFO functions ======================================
 ; Initializes the system VIA (the USB debugger), and syncs with the USB chip.
@@ -444,6 +475,9 @@ OFCONT
 OFX1		
 		PLA							; restore input character, N and Z flags
 		RTS
+		
+
+
 ; SEND NAK packet
 SEND_NAK
 		LDA	#NAK
@@ -459,6 +493,9 @@ SENDC1	LDA	#SOF
 		JSR	PUTCH
 		LDA	#EOF
 		BRA	PUTCH
+		
+
+	
 
 ; This subroutine translates SOF DLE and EOF for inside-packet protection of OOB characters.  Enter at PUTCH by itself for untranslated output	
 CHR_ENCODE
@@ -498,7 +535,9 @@ PUTSY1
 ; return from user code (RAM) to monitor (ROM)
 BRK_NAT_ISR
 		REP	#X_FLAG			; 16 bit index, binary mode
+		.xl
 		SEP	#M_FLAG			; 8 bit A (process byte variables)
+		.as
 		STX	M_X
 		STY	M_Y
 		STA	M_A
@@ -511,16 +550,6 @@ BRK_NAT_ISR
 		DEX					; points past BRK... restore to point to BRK for continue
 		DEX					; " Now we're pointing at BRK.  Handler should restore the byte here
 		STX	M_PC			; save PC=*(BRK instruction)
-		; Restore original instruction byte overritten by BRK!
-		LDA M_PC
-		STA	EA_L
-		LDA	M_PC+1
-		STA	EA_H
-		LDA	#0				; FUBAR - revisit Bank != 0 case
-		STA	EA_B
-		; Store it back 
-		LDA	BP_SAVE
-		STA [EA_PTR]
 		; End restore instruction byte
 		PLA					; Get PBR of code
 		STA	M_PBR
@@ -589,11 +618,6 @@ BRK_CONT
 		SBC	#$00			; take care of any borrow from low PC
 		STA	M_PC+1			; 
 		STA 	EA_H
-		; Restore the instruction overwritten by BRK
-		LDY	#$00
-		LDA	BP_SAVE
-		STA	(EA_PTR)		; restore the byte
-		; end restore
 		LDA	#$FF
 		STA	M_EFLAG			; E=1; we came from Emulation mode
 		STZ	M_PBR			; Probably garbage, but slightly possibly holding future context 
@@ -627,9 +651,9 @@ RESTORE		LDA	M_EFLAG				; emulation mode?
 		BEQ	RESNN				; If 0, we're restoring to a native context
 ; Restore machine to user emulation context
 RESNE	
+		SEP	#(X_FLAG | M_FLAG)
 		.xs
 		.as
-		SEP	#(X_FLAG | M_FLAG)
 		REP	#D_FLAG
 		SEC
 		XCE					; we're in emulation mode, 8 bit everything
@@ -652,7 +676,9 @@ RESNN
 		.xl
 		.as
 		REP     #(X_FLAG | D_FLAG)              ; 16 bit index, binary mode
-                SEP     #M_FLAG                         ; 8 bit A (process byte stream)
+		.xl
+        SEP     #M_FLAG                         ; 8 bit A (process byte stream)
+		.as
 		LDX	M_SP
 		TXS					; Restore the stack - target stack but we're pointing to free space so OK
 		LDA	M_PBR		; Push Program Bank #

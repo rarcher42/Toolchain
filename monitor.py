@@ -3,10 +3,24 @@ import time
 import sys
 import serial
 ''' 
-01 READ BYTES:  01 SAL SAH SAB BCL BCH NLO NHI     (read N+1 bytes 1-256)
-02 WRITE BYTES  02 SAL SAH SAB B0 B1 B2..... BN  (use CMD_IX to find last byte to write)
-03 JUMP TO ADDRESS  03 SAL SAH SAB  
+01 READBYTES:       01 SAL SAH SAB BCL BCH NLO N    (read N+1 bytes 1-256 for N=0..255)
+    returns n+1 bytes
+    
+02 WRITEBYTES       02 SAL SAH SAB B0 B1 B2..... BN  (use CMD_IX to find last byte to write) - Max 256 bytes
+    returns ACK
+    
+03 JUMPTO           03 SAL SAH SAB  
+    returns ACK; anything the target program outputs to FIFO
+    
+04 SETBKPT          04 SAL SAH SAB
+    returns replaced byte.  Store this away and restore it with a WRITEBYTES
+
+05 GETCONTEXT       05
+    returns         [E-flag][Flags][B][A][XL][XH][YL][YH][SPL][SPH][DPRL][DPRH][PCL][PCH][PBR][DBR]
 '''
+
+SER_PORT="COM6"
+
 class Frame:
     ''' Encapsulate a frame '''
     def __init__(self):
@@ -168,13 +182,13 @@ class CPU_Pipe:
         return self.v.wire_decode(reinf)
         
     def read_mem(self, sa_24, nbytes):
-        assert(nbytes < 257)
+        nbytes -= 1             # 0-255 --> 1-256
+        assert(nbytes < 256)
         sab = ((sa_24 >> 16) & 0xFF).to_bytes(1, 'little')
         sah = ((sa_24 >> 8) & 0xFF).to_bytes(1, 'little')
         sal = ((sa_24) & 0xFF).to_bytes(1, 'little')
         nbl = (nbytes & 0xFF).to_bytes(1, 'little')
-        nbh = ((nbytes >> 8) & 0xFF).to_bytes(1, 'little')
-        cmd = b'\x01'+sal+sah+sab+nbl+nbh
+        cmd = b'\x01'+sal+sah+sab+nbl
         return self.cmd_dialog(cmd)
         
     def write_mem(self, sa_24, data):
@@ -192,25 +206,135 @@ class CPU_Pipe:
         sah = ((sa_24 >> 8) & 0xFF).to_bytes(1, 'little')
         sal = ((sa_24) & 0xFF).to_bytes(1, 'little')
         cmd = b'\x03' + sal + sah + sab
-        resp = self.cmd_dialog(cmd)
-        # Should ACK the command before jumping since we don't know what will happen afterwards
-        if resp == b'\x06':
-            print("\nACK")
-        time.sleep(5.0)                 # Allow transferred program time to generate output for us (if any)
-        return self.fifo.read()         # Return target program's initial output
-    
+        return self.cmd_dialog(cmd)
+        
     def set_breakpoint(self, sa_24):
         sab = ((sa_24 >> 16) & 0xFF).to_bytes(1, 'little')
         sah = ((sa_24 >> 8) & 0xFF).to_bytes(1, 'little')
         sal = ((sa_24) & 0xFF).to_bytes(1, 'little')
         cmd = b'\x04' + sal + sah + sab
-        resp = self.cmd_dialog(cmd)
-        # Should ACK the command before jumping since we don't know what will happen afterwards
-        if resp == b'\x06':
-            print("\nACK")
-        return self.fifo.read()         # Return target program's initial output
+        return self.cmd_dialog(cmd)
+        
+    def get_registers(self):
+        cmd = b'\x05'
+        return self.cmd_dialog(cmd)
         
         
+    def decode_flags(self, f, emode):
+        s = "FLAGS="
+        if f & 0x80:
+            s+= "N"
+        else:
+            s+= "-"
+            
+        if f & 0x40:
+            s += "V"
+        else:
+            s += "-"
+            
+        if f & 0x20:
+            if emode == 0:
+                s += "M"
+            else:
+                s += '1'
+        else:
+            s += "-"
+        
+        if f & 0x10:
+            if emode == 0:
+                s += "X"
+            else:
+                s += 'B'       # Break flag
+        else:
+            s += "-"
+            
+        if f & 0x8:
+            s += "D"
+        else:
+            s += "-"
+            
+        if f & 0x4:
+            s += "I"
+        else:
+            s += "-"
+            
+        if f & 0x2:
+            s += "Z"
+        else:
+            s += "-"
+        if f & 0x1:
+            s += "C"
+        else:
+            s += "-"
+        return s
+        
+    def print_registers(self):
+    # Refactor this, eventually
+        # [E-flag][Flags][B][A][XL][XH][YL][YH][SPL][SPH][DPRL][DPRH][PCL][PCH][PBR][DBR]
+        # 0:  E-Flag:  00= native FF=emulation
+        # 1:  Flags      
+        # 2:  A
+        # 3:  B
+        # 4:  XL, XH
+        # 6:  YL, YH
+        # 8:  SPL, SPH
+        # 10: DPRL, DPRH
+        # 12: PCL, PCH
+        # 14: PBR
+        # 15: DBR
+        
+        regs = self.get_registers()
+        if regs[0] == 0:
+            m_flag = (regs[1] & 0b00100000) != 0
+            x_flag = (regs[1] & 0b00010000) != 0
+            # Print native mode registers
+            print("E=0: ", end="")
+            if m_flag:
+                s = "A=%02X," % int.from_bytes(regs[2:3], "little")
+                print(s, end="")
+                s = "B=%02X," % int.from_bytes(regs[3:4], "little")
+                print(s, end="")
+            else:
+                s = "C=%04X," % int.from_bytes(regs[2:4], "little")
+                print(s, end="")
+             # Print X and Y
+            if x_flag:
+                s = "X=%02X," % int.from_bytes(regs[4:5], "little")
+                print(s, end="")
+                s = "Y=%02X," % int.from_bytes(regs[6:7], "little")
+                print(s, end="")
+            else:
+                s = "X=%04X," % int.from_bytes(regs[4:6], "little")
+                print(s, end="")
+                s = "Y=%04X," % int.from_bytes(regs[6:8], "little")
+                print(s, end="")
+            # Print SP
+            s = "SP=%04X," % int.from_bytes(regs[8:10], "little")
+            print(s, end="")
+            s = "DPR=%04X," % int.from_bytes(regs[10:12], "little")
+            print(s, end="")
+            s = "PC=%04X," % int.from_bytes(regs[12:14], "little")
+            print(s, end="")
+            s = "PBR=%02X," % int.from_bytes(regs[14:15], "little")
+            print(s, end="")
+            s = "DBR=%02X," % int.from_bytes(regs[15:16], "little")
+            print(s, end="")
+            print(self.decode_flags(regs[1], False))
+        else:
+            # Print emulation mode registers
+            print("E=1: ", end="")
+            s = "A=%02X," % int.from_bytes(regs[2:3], "little")
+            print(s, end="")
+            s = "B=%02X," % int.from_bytes(regs[3:4], "little")
+            print(s, end="")
+            s = "X=%02X," % int.from_bytes(regs[4:5], "little")
+            print(s, end="")
+            s = "Y=%02X," % int.from_bytes(regs[6:7], "little")
+            print(s, end="")
+            s = "SP=%04X," % (int.from_bytes(regs[8:9], "little") | 0x0100)
+            print(s, end="")
+            print(self.decode_flags(regs[1], True))
+            
     def str_to_bytes(self, s):
         outb = b''
         for i in range(0, len(s), 2):
@@ -304,7 +428,7 @@ def test_page_read_write(address):
     for b in range(255, -1, -1):
         outb += b.to_bytes(1, "little")
     # OPEN a bidirectional CPU pipeline
-    pipe = CPU_Pipe('COM4', 921600)
+    pipe = CPU_Pipe(SER_PORT, 921600)
    
     print("Writing data directly to memory")
     resp = pipe.write_mem(address, outb)
@@ -316,34 +440,27 @@ def test_page_read_write(address):
     return 
  
 def test_go(address):
-    pipe = CPU_Pipe('COM4', 921600)
+    pipe = CPU_Pipe(SER_PORT, 921600)
     reply = pipe.jump_long(address)
     print(reply)
     return
-    
+
+
 if __name__ == "__main__":
-    pipe = CPU_Pipe('COM4', 921600)
-   
+    pipe = CPU_Pipe(SER_PORT, 921600)
+ 
     context_addr = 0x7e00
     bp_addr = 0x002011
+    print("Sending S-record file")
     pipe.send_srec("rammon.hex")
-    # Read byte at bp addr before set bp
-    print("before")
-    mem = pipe.read_mem(bp_addr, 1)
-    dump_hex(bp_addr, mem)
-    res = pipe.set_breakpoint(bp_addr)
-    print(res)
-    print("after")
-    mem = pipe.read_mem(bp_addr, 1)
-    dump_hex(bp_addr, mem)
+    '''
+    repl_byte = pipe.set_breakpoint(bp_addr)
+    '''
+    print("\nJumping to program")
     res = pipe.jump_long(0x002000)
     print(res)
     print("CONTEXT")
-    mem = pipe.read_mem(context_addr, 16)
-    dump_hex(context_addr, mem)
-    print("\nINSTRUCTION RESTORED?:")
-    mem = pipe.read_mem(bp_addr, 1)
-    dump_hex(bp_addr, mem)
+    pipe.print_registers()
     exit(0)
    
     start_t = time.time()
@@ -353,7 +470,8 @@ if __name__ == "__main__":
     end_t = time.time()
     print("\n\nDumped 64K byte in %10.1f seconds" % (end_t - start_t))
     print("Rate = %10.1f bytes/second: " % (65536.0 / (end_t - start_t)))
-    '''
+    
+    exit(1)
     while True:
         n = random.randrange(1, 256)
         inf = b'E'
@@ -376,4 +494,4 @@ if __name__ == "__main__":
     
     
 
-    '''
+   
