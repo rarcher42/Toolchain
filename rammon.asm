@@ -56,7 +56,7 @@ RAMSTART
 		
 		LDY	#125		; 2025
 		LDX	#12			; December
-		LDA	#9			; 12th (a Tuesday)
+		LDA	#25			; 25th (a Thursday)
 		JSR	WEKDAY		; Get the day of the Wek!
 		BRK				; and check the results
 HERE	BRA	HERE
