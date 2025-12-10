@@ -567,9 +567,6 @@ BNICP1
 		PHB					; Save 
 		PLA
 		STA	M_DBR
-		PHK
-		PLA
-		STA	M_PBR
 		; Fake up the stack to return to system monitor
 BNRET	LDA	#0				; Monitor is in bank #0
 		PHA					; push PBR=0
