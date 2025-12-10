@@ -20,6 +20,295 @@ import serial
 '''
 
 SER_PORT="COM4"
+opcode_table = (
+# 00
+("BRK", 2, 2, 2, 2),             # BRK implied
+("ORA", 2, 2, 2, 2),             # ORA (dp, X)
+("COP", 2, 2, 2, 2),             # COP
+("ORA", 2, 2, 2, 2),             # ORA dp
+("TSB", 2, 2, 2, 2),             # TSB dp
+("ORA", 2, 2, 2, 2),             # ORA dp
+("ASL", 2, 2, 2, 2),             # ASL dp
+("ORA", 2, 2, 2, 2),             # ORA (dp)
+# 08
+("PHP", 1, 1, 1, 1),             # PHP
+("ORA", 2, 3, 3, 2),             # ORA #imm (M-dependent)
+("ASL", 1, 1, 1, 1),             # ASL A
+("PHD", 1, 1, 1, 1),             # PHD
+("TSB", 3, 3, 3, 3),             # TSB abs
+("ORA", 3, 3, 3, 3),             # ORA abs
+("ASL", 3, 3, 3, 3),             # ASL abs
+("ORA", 4, 4, 4, 4),             # ORA long
+# 10
+("BPL", 2, 2, 2, 2),             # BPL
+("ORA", 2, 2, 2, 2),             # ORA (dp),Y
+("ORA", 2, 2, 2, 2),             # ORA (dp)
+("ORA", 2, 2, 2, 2),             # ORA (dp,S),Y
+("TRB", 2, 2, 2, 2),             # TRB dp
+("ORA", 3, 3, 3, 3),             # ORA dp,X
+("ASL", 2, 2, 2, 2),             # ASL dp,X
+("ORA", 4, 4, 4, 4),             # ORA (dp),Y
+# 18
+("CLC", 1, 1, 1, 1),             # CLC
+("ORA", 3, 4, 4, 4),             # ORA abs,Y
+("INC", 1, 1, 1, 1),             # INC A
+("TCS", 1, 1, 1, 1),             # TCS
+("TRB", 3, 3, 3, 3),             # TRB abs
+("ORA", 4, 4, 4, 4),             # ORA abs,X
+("ASL", 3, 3, 3, 3),             # ASL abs,X
+("ORA", 5, 5, 5, 5),             # ORA long,X
+# 20
+("JSR", 3, 3, 3, 3),             # JSR abs
+("AND", 2, 2, 2, 2),             # AND (dp,X)
+("JSL", 4, 4, 4, 4),             # JSL long
+("AND", 2, 2, 2, 2),             # AND dp
+("BIT", 2, 2, 2, 2),             # BIT dp
+("AND", 2, 2, 2, 2),             # AND dp
+("ROL", 2, 2, 2, 2),             # ROL dp
+("AND", 2, 2, 2, 2),             # AND (dp)
+# 28
+("PLP", 1, 1, 1, 1),             # PLP
+("AND", 2, 3, 3, 2),             # AND #imm (M-dependent)
+("ROL", 1, 1, 1, 1),             # ROL A
+("PLD", 1, 1, 1, 1),             # PLD
+("BIT", 3, 3, 3, 3),             # BIT abs
+("AND", 3, 3, 3, 3),             # AND abs
+("ROL", 3, 3, 3, 3),             # ROL abs
+("AND", 4, 4, 4, 4),             # AND long# 30
+("BMI", 2, 2, 2, 2),             # BMI
+("AND", 2, 2, 2, 2),             # AND (dp),Y
+("AND", 2, 2, 2, 2),             # AND (dp)
+("AND", 2, 2, 2, 2),             # AND (dp,S),Y
+("BIT", 2, 2, 2, 2),             # BIT dp,X
+("AND", 3, 3, 3, 3),             # AND dp,X
+("ROL", 2, 2, 2, 2),             # ROL dp,X
+("AND", 4, 4, 4, 4),             # AND (dp),Y
+# 38
+("SEC", 1, 1, 1, 1),             # SEC
+("AND", 3, 4, 4, 4),             # AND abs,Y
+("DEC", 1, 1, 1, 1),             # DEC A
+("TSC", 1, 1, 1, 1),             # TSC
+("BIT", 3, 3, 3, 3),             # BIT abs
+("AND", 4, 4, 4, 4),             # AND abs,X
+("ROL", 3, 3, 3, 3),             # ROL abs,X
+("AND", 5, 5, 5, 5),             # AND long,X
+# 40
+("RTI", 1, 1, 1, 1),             # RTI
+("EOR", 2, 2, 2, 2),             # EOR (dp,X)
+("WDM", 2, 2, 2, 2),             # WDM
+("EOR", 2, 2, 2, 2),             # EOR dp
+("MVN", 3, 3, 3, 3),             # MVN src,dst
+("EOR", 2, 2, 2, 2),             # EOR dp
+("LSR", 2, 2, 2, 2),             # LSR dp
+("EOR", 2, 2, 2, 2),             # EOR (dp)
+# 48
+("PHA", 1, 1, 1, 1),             # PHA
+("EOR", 2, 3, 3, 2),             # EOR #imm (M-dependent)
+("LSR", 1, 1, 1, 1),             # LSR A
+("PHK", 1, 1, 1, 1),             # PHK
+("JMP", 3, 3, 3, 3),             # JMP abs
+("EOR", 3, 3, 3, 3),             # EOR abs
+("LSR", 3, 3, 3, 3),             # LSR abs
+("EOR", 4, 4, 4, 4),             # EOR long
+# 50
+("BVC", 2, 2, 2, 2),             # BVC
+("EOR", 2, 2, 2, 2),             # EOR (dp),Y
+("EOR", 2, 2, 2, 2),             # EOR (dp)
+("EOR", 2, 2, 2, 2),             # EOR (dp,S),Y
+("MVN", 3, 3, 3, 3),             # MVN (mirrors 44; same encoding rules)
+("EOR", 3, 3, 3, 3),             # EOR dp,X
+("LSR", 2, 2, 2, 2),             # LSR dp,X
+("EOR", 4, 4, 4, 4),             # EOR (dp),Y
+# 58
+("CLI", 1, 1, 1, 1),             # CLI
+("EOR", 3, 4, 4, 4),             # EOR abs,Y
+("PHY", 1, 1, 1, 1),             # PHY
+("TCD", 1, 1, 1, 1),             # TCD
+("JMP", 3, 3, 3, 3),             # JMP (abs)
+("EOR", 4, 4, 4, 4),             # EOR abs,X
+("LSR", 3, 3, 3, 3),             # LSR abs,X
+("EOR", 5, 5, 5, 5),             # EOR long,X
+# 60
+("RTS", 1, 1, 1, 1),             # RTS
+("ADC", 2, 2, 2, 2),             # ADC (dp,X)
+("PER", 3, 3, 3, 3),             # PER relative long
+("ADC", 2, 2, 2, 2),             # ADC dp
+("STZ", 2, 2, 2, 2),             # STZ dp
+("ADC", 2, 2, 2, 2),             # ADC dp
+("ROR", 2, 2, 2, 2),             # ROR dp
+("ADC", 2, 2, 2, 2),             # ADC (dp)
+# 68
+("PLA", 1, 1, 1, 1),             # PLA
+("ADC", 2, 3, 3, 2),             # ADC #imm (M-dependent)
+("ROR", 1, 1, 1, 1),             # ROR A
+("RTL", 1, 1, 1, 1),             # RTL
+("JMP", 3, 3, 3, 3),             # JMP abs long indirect: JMP (abs)
+("ADC", 3, 3, 3, 3),             # ADC abs
+("ROR", 3, 3, 3, 3),             # ROR abs
+("ADC", 4, 4, 4, 4),             # ADC long
+# 70
+("BVS", 2, 2, 2, 2),             # BVS
+("ADC", 2, 2, 2, 2),             # ADC (dp),Y
+("ADC", 2, 2, 2, 2),             # ADC (dp)
+("ADC", 2, 2, 2, 2),             # ADC (dp,S),Y
+("STZ", 2, 2, 2, 2),             # STZ dp,X
+("ADC", 3, 3, 3, 3),             # ADC dp,X
+("ROR", 2, 2, 2, 2),             # ROR dp,X
+("ADC", 4, 4, 4, 4),             # ADC (dp),Y
+# 78
+("SEI", 1, 1, 1, 1),             # SEI
+("ADC", 3, 4, 4, 4),             # ADC abs,Y
+("PLY", 1, 1, 1, 1),             # PLY
+("TDC", 1, 1, 1, 1),             # TDC
+("JMP", 3, 3, 3, 3),             # JMP (abs,X)
+("ADC", 4, 4, 4, 4),             # ADC abs,X
+("ROR", 3, 3, 3, 3),             # ROR abs,X
+("ADC", 5, 5, 5, 5),             # ADC long,X
+# 80
+("BRA", 2, 2, 2, 2),             # BRA
+("STA", 2, 2, 2, 2),             # STA (dp,X)
+("BRL", 3, 3, 3, 3),             # BRL
+("STA", 2, 2, 2, 2),             # STA dp
+("STY", 2, 2, 2, 2),             # STY dp
+("STA", 2, 2, 2, 2),             # STA dp
+("STX", 2, 2, 2, 2),             # STX dp
+("STA", 2, 2, 2, 2),             # STA (dp)
+# 88
+("DEY", 1, 1, 1, 1),             # DEY
+("BIT", 2, 3, 3, 2),             # BIT #imm (M-dependent)
+("TXA", 1, 1, 1, 1),             # TXA
+("PHB", 1, 1, 1, 1),             # PHB
+("STY", 3, 3, 3, 3),             # STY abs
+("STA", 3, 3, 3, 3),             # STA abs
+("STX", 3, 3, 3, 3),             # STX abs
+("STA", 4, 4, 4, 4),             # STA long
+# 90
+("BCC", 2, 2, 2, 2),             # BCC
+("STA", 2, 2, 2, 2),             # STA (dp),Y
+("STA", 2, 2, 2, 2),             # STA (dp)
+("STA", 2, 2, 2, 2),             # STA (dp,S),Y
+("STY", 2, 2, 2, 2),             # STY dp,X
+("STA", 3, 3, 3, 3),             # STA dp,X
+("STX", 2, 2, 2, 2),             # STX dp,Y
+("STA", 4, 4, 4, 4),             # STA (dp),Y
+# 98
+("TYA", 1, 1, 1, 1),             # TYA
+("STA", 3, 4, 4, 4),             # STA abs,Y
+("TXS", 1, 1, 1, 1),             # TXS
+("TXY", 1, 1, 1, 1),             # TXY
+("STZ", 3, 3, 3, 3),             # STZ abs
+("STA", 4, 4, 4, 4),             # STA abs,X
+("STZ", 3, 3, 3, 3),             # STZ abs,X
+("STA", 5, 5, 5, 5),             # STA long,X
+# A0
+("LDY", 2, 3, 2, 3),             # LDY #imm (X-dependent)
+("LDA", 2, 3, 3, 2),             # LDA #imm (M-dependent)
+("LDX", 2, 3, 2, 3),             # LDX #imm (X-dependent)
+("LDA", 2, 2, 2, 2),             # LDA dp
+("LDY", 2, 2, 2, 2),             # LDY dp
+("LDA", 2, 2, 2, 2),             # LDA dp
+("LDX", 2, 2, 2, 2),             # LDX dp
+("LDA", 2, 2, 2, 2),             # LDA (dp)
+# A8
+("TAY", 1, 1, 1, 1),             # TAY
+("LDA", 2, 3, 3, 2),             # LDA #imm (duplicate immediate forms only differ by mnemonic)
+("TAX", 1, 1, 1, 1),             # TAX
+("PLB", 1, 1, 1, 1),             # PLB
+("LDY", 3, 3, 3, 3),             # LDY abs
+("LDA", 3, 3, 3, 3),             # LDA abs
+("LDX", 3, 3, 3, 3),             # LDX abs
+("LDA", 4, 4, 4, 4),             # LDA long
+# B0
+("BCS", 2, 2, 2, 2),             # BCS
+("LDA", 2, 2, 2, 2),             # LDA (dp),Y
+("LDA", 2, 2, 2, 2),             # LDA (dp)
+("LDA", 2, 2, 2, 2),             # LDA (dp,S),Y
+("LDY", 2, 2, 2, 2),             # LDY dp,X
+("LDA", 3, 3, 3, 3),             # LDA dp,X
+("LDX", 2, 2, 2, 2),             # LDX dp,Y
+("LDA", 4, 4, 4, 4),             # LDA (dp),Y
+# B8
+("CLV", 1, 1, 1, 1),             # CLV
+("LDA", 3, 4, 4, 4),             # LDA abs,Y
+("TSX", 1, 1, 1, 1),             # TSX
+("TYX", 1, 1, 1, 1),             # TYX
+("LDY", 3, 3, 3, 3),             # LDY abs
+("LDA", 4, 4, 4, 4),             # LDA abs,X
+("LDX", 3, 3, 3, 3),             # LDX abs,Y
+("LDA", 5, 5, 5, 5),             # LDA long,X
+# C0
+("CPY", 2, 3, 2, 3),             # CPY #imm (X-dependent)
+("CMP", 2, 2, 2, 2),             # CMP (dp,X)
+("REP", 2, 2, 2, 2),             # REP #imm (always 2-byte immediate)
+("CMP", 2, 2, 2, 2),             # CMP dp
+("CPY", 2, 2, 2, 2),             # CPY dp
+("CMP", 2, 2, 2, 2),             # CMP dp
+("DEC", 2, 2, 2, 2),             # DEC dp
+("CMP", 2, 2, 2, 2),             # CMP (dp)
+# C8
+("INY", 1, 1, 1, 1),             # INY
+("CMP", 2, 3, 3, 2),             # CMP #imm (M-dependent)
+("DEX", 1, 1, 1, 1),             # DEX
+("WAI", 1, 1, 1, 1),             # WAI
+("CPY", 3, 3, 3, 3),             # CPY abs
+("CMP", 3, 3, 3, 3),             # CMP abs
+("DEC", 3, 3, 3, 3),             # DEC abs
+("CMP", 4, 4, 4, 4),             # CMP long
+# D0
+("BNE", 2, 2, 2, 2),             # BNE
+("CMP", 2, 2, 2, 2),             # CMP (dp),Y
+("CMP", 2, 2, 2, 2),             # CMP (dp)
+("CMP", 2, 2, 2, 2),             # CMP (dp,S),Y
+("PEI", 2, 2, 2, 2),             # PEI dp
+("CMP", 3, 3, 3, 3),             # CMP dp,X
+("DEC", 2, 2, 2, 2),             # DEC dp,X
+("CMP", 4, 4, 4, 4),             # CMP (dp),Y
+# D8
+("CLD", 1, 1, 1, 1),             # CLD
+("CMP", 3, 4, 4, 4),             # CMP abs,Y
+("PHX", 1, 1, 1, 1),             # PHX
+("STP", 1, 1, 1, 1),             # STP
+("JML", 3, 3, 3, 3),             # JML abs long indirect
+("CMP", 4, 4, 4, 4),             # CMP abs,X
+("DEC", 3, 3, 3, 3),             # DEC abs,X
+("CMP", 5, 5, 5, 5),             # CMP long,X
+# E0
+("CPX", 2, 3, 2, 3),             # CPX #imm (X-dependent)
+("SBC", 2, 2, 2, 2),             # SBC (dp,X)
+("SEP", 2, 2, 2, 2),             # SEP #imm (always 2 bytes)
+("SBC", 2, 2, 2, 2),             # SBC dp
+("CPX", 2, 2, 2, 2),             # CPX dp
+("SBC", 2, 2, 2, 2),             # SBC dp
+("INC", 2, 2, 2, 2),             # INC dp
+("SBC", 2, 2, 2, 2),             # SBC (dp)
+# E8
+("INX", 1, 1, 1, 1),             # INX
+("SBC", 2, 3, 3, 2),             # SBC #imm (M-dependent)
+("NOP", 1, 1, 1, 1),             # NOP
+("XBA", 1, 1, 1, 1),             # XBA
+("INC", 3, 3, 3, 3),             # INC abs
+("SBC", 3, 3, 3, 3),             # SBC abs
+("INC", 3, 3, 3, 3),             # INC abs
+("SBC", 4, 4, 4, 4),             # SBC long
+# F0
+("BEQ", 2, 2, 2, 2),             # BEQ
+("SBC", 2, 2, 2, 2),             # SBC (dp),Y
+("SBC", 2, 2, 2, 2),             # SBC (dp)
+("SBC", 2, 2, 2, 2),             # SBC (dp,S),Y
+("PEA", 3, 3, 3, 3),             # PEA abs
+("SBC", 3, 3, 3, 3),             # SBC dp,X
+("INC", 2, 2, 2, 2),             # INC dp,X
+("SBC", 4, 4, 4, 4),             # SBC (dp),Y
+# F8
+("SED", 1, 1, 1, 1),             # SED
+("SBC", 3, 4, 4, 4),             # SBC abs,Y
+("PLX", 1, 1, 1, 1),             # PLX
+("XCE", 1, 1, 1, 1),             # XCE
+("JSR", 3, 3, 3, 3),             # JSR (abs,X)
+("SBC", 4, 4, 4, 4),             # SBC abs,X
+("INC", 3, 3, 3, 3),             # INC abs,X
+("SBC", 5, 5, 5, 5)              # SBC long,X
+)
 
 class Frame:
     ''' Encapsulate a frame '''
@@ -466,6 +755,7 @@ def test_go(address):
 
 
 if __name__ == "__main__":
+    print(len(opcode_table))
     pipe = CPU_Pipe(SER_PORT, 921600)
     srec_fn = "rammon.s19"
     print("Loading %s" % srec_fn)
