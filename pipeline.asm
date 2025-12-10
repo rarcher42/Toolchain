@@ -16,7 +16,6 @@
 ; 00:7000 - 00:7DFF		-	Monitor stack area
 ; 00:0000 - 00:6FFF		-	Development area*
 
-
 BS		= 	$08
 LF		= 	$0A
 CR		= 	$0D
@@ -33,7 +32,6 @@ SOF		= 	ST_X
 EOF		= 	ETX
 ACK		= 	$06
 NAK		= 	$15
-
 
 * 		= 	$40					; Zero page assignments
 ;
