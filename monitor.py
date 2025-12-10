@@ -221,7 +221,7 @@ class CPU_Pipe:
         
         
     def decode_flags(self, f, emode):
-        s = "FLAGS="
+        s = "FLAGS(%02X)=" % f
         if f & 0x80:
             s+= "N"
         else:
@@ -284,11 +284,12 @@ class CPU_Pipe:
         # 15: DBR
         
         regs = self.get_registers()
-        if regs[0] == 0:
-            m_flag = (regs[1] & 0b00100000) != 0
-            x_flag = (regs[1] & 0b00010000) != 0
+        if regs[0] < 4:
+            m_flag = (regs[0] & 0b10)
+            x_flag = (regs[0] & 0b01)
             # Print native mode registers
-            print("E=0: ", end="")
+            s = "E(XM=%02X)=0 " % regs[0]
+            print(s, end="")
             if m_flag:
                 s = "A=%02X," % int.from_bytes(regs[2:3], "little")
                 print(s, end="")
@@ -332,6 +333,8 @@ class CPU_Pipe:
             s = "Y=%02X," % int.from_bytes(regs[6:7], "little")
             print(s, end="")
             s = "SP=%04X," % (int.from_bytes(regs[8:9], "little") | 0x0100)
+            print(s, end="")
+            s = "PC=%04X," % int.from_bytes(regs[12:14], "little")
             print(s, end="")
             print(self.decode_flags(regs[1], True))
             
@@ -386,7 +389,7 @@ class CPU_Pipe:
                 barry = self.str_to_bytes(datastr)
                 self.write_mem(addr, barry)
             elif rectype == 'S5':
-                print("Rec(S5)")
+                pass
             elif rectype == 'S7':
                 ads = li[4:12]
                 # print("Rec(S7) - 32 bits @$", ads)
@@ -448,18 +451,11 @@ def test_go(address):
 
 if __name__ == "__main__":
     pipe = CPU_Pipe(SER_PORT, 921600)
- 
-    context_addr = 0x7e00
-    bp_addr = 0x002011
-    print("Sending S-record file")
-    pipe.send_srec("rammon.hex")
-    '''
-    repl_byte = pipe.set_breakpoint(bp_addr)
-    '''
+    srec_fn = "rammon.hex"
+    print("Loading %s" % srec_fn)
+    pipe.send_srec(srec_fn)
     print("\nJumping to program")
     res = pipe.jump_long(0x002000)
-    print(res)
-    print("CONTEXT")
     pipe.print_registers()
     exit(0)
    

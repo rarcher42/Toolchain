@@ -530,22 +530,27 @@ PUTSXL1
 		BRA	PUTSY
 PUTSY1 		
 		RTS 
-;
+
 ; Native BREAK exception handler:  Came from native mode user program!
 ; return from user code (RAM) to monitor (ROM)
 BRK_NAT_ISR
-		REP	#X_FLAG			; 16 bit index, binary mode
-		.xl
-		SEP	#M_FLAG			; 8 bit A (process byte variables)
-		.as
-		STX	M_X
-		STY	M_Y
+		SEP	#M_FLAG			; 
 		STA	M_A
 		XBA
 		STA	M_B
 		PLA
 		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
-		STZ	M_EFLAG			; E=0; we came from native mode
+		AND #$30			; Figure which E mode
+		LSR	A
+		LSR	A
+		LSR	A
+		LSR	A
+		STA	M_EFLAG			; Remember the flag combinations		
+BNICP1
+		REP	#X_FLAG			; 16 bit index, binary mode
+		.xl
+		STX	M_X
+		STY	M_Y
 		PLX					; Pull PC15..0 return address off stack
 		DEX					; points past BRK... restore to point to BRK for continue
 		DEX					; " Now we're pointing at BRK.  Handler should restore the byte here
@@ -565,7 +570,7 @@ BRK_NAT_ISR
 		PLA
 		STA	M_PBR
 		; Fake up the stack to return to system monitor
-		LDA	#0				; Monitor is in bank #0
+BNRET	LDA	#0				; Monitor is in bank #0
 		PHA					; push PBR=0
 		LDX	#START
 		PHX					; push "return address"
@@ -594,6 +599,8 @@ BRK_IRQ_EMU
 		STA	M_A				; Save A and B
 		XBA
 		STA	M_B
+		LDA	#$FF
+		STA	M_EFLAG			; E=1; we came from Emulation mode
 		PLA					; get flags from stack
 		PHA					; and put them back!
 		AND	#BRK_FLAG		; Check for BRK flag
@@ -613,13 +620,11 @@ BRK_CONT
 		SEC
 		SBC	#$02			; Subtract 2 from low address
 		STA	M_PC			; store as low PC
-		STA 	EA_L
+		STA EA_L
 		PLA					; Get high PC PLA sets N and Z but leaves C alone fortunately
 		SBC	#$00			; take care of any borrow from low PC
 		STA	M_PC+1			; 
-		STA 	EA_H
-		LDA	#$FF
-		STA	M_EFLAG			; E=1; we came from Emulation mode
+		STA EA_H
 		STZ	M_PBR			; Probably garbage, but slightly possibly holding future context 
 		TSX					; Now we're pulled everything off stack - it's pre-BRK position
 		STX	M_SP
