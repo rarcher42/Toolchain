@@ -5,6 +5,7 @@
 
         	.cpu    "65816"
 
+		.INCLUDE "cpu_symbols.inc"
 		.INCLUDE "via_symbols.inc"
 
 ; Memory Map
@@ -33,25 +34,6 @@ EOF		= ETX
 ACK		= $06
 NAK		= $15
 
-MASK0		= %00000001
-MASK1		= %00000010
-MASK2		= %00000100
-MASK3		= %00001000
-MASK4		= %00010000
-MASK5		= %00100000
-MASK6		= %01000000
-MASK7		= %10000000
-
-; Flag definition to OR for SEP, REP
-N_FLAG		= MASK7
-V_FLAG		= MASK6
-M_FLAG		= MASK5
-X_FLAG		= MASK4
-BRK_FLAG	= MASK4				; Emulation mode 
-D_FLAG		= MASK3
-I_FLAG		= MASK2
-Z_FLAG		= MASK1
-C_FLAG		= MASK0
 
 * 		= $40					; Zero page assignments
 ;
@@ -650,62 +632,81 @@ IRQ_EMU_ISR
 		.as
 
 ; Restore machine to user context
-RESTORE		LDA	M_EFLAG				; emulation mode?
-		BEQ	RESNN				; If 0, we're restoring to a native context
+RESTORE		
+		LDA	M_EFLAG				; emulation mode?
+		BNE	RESNE				; If 0, we're restoring to a native context
+; Restore machine to user native context
+RESNN
+		REP	#(X_FLAG | D_FLAG)
+		.xl
+		SEP	#(M_FLAG)
+		.as
+		CLC
+		XCE										; go to native mode
+		LDX	M_SP								; 16 bit SP
+		TXS										; Restore the stack - target stack but we're pointing to free space so OK
+		; Set up the stack frame for RTI
+		LDA	M_PBR
+		PHA
+		LDX	M_PC
+		PHX										; push 
+		LDA	M_FLAGS
+		PHA
+		; End up setting stack frame for RTI
+		LDX	M_DPR
+		PHX
+		LDA	M_DBR
+		PHA
+		LDX	M_X
+		LDY	M_Y
+		LDA	M_B
+		XBA
+		LDA	M_A
+		PLB
+		PLD
+		RTI										; RTI(24) Must use RTI to restore flags & Full 24 bit PC.  No other way!(?)
 ; Restore machine to user emulation context
 RESNE	
 		SEP	#(X_FLAG | M_FLAG)
 		.xs
 		.as
-		REP	#D_FLAG
+		REP	#(D_FLAG)
 		SEC
 		XCE					; we're in emulation mode, 8 bit everything
-		LDX	M_SP				; only LSByte matters
-		TXS					; Now in target stack context (but Ok to add below/free)
-		LDA	M_PC+1
+		LDX	M_SP			; only LSByte matters
+		TXS					; Now in target stack context (but Ok to add below/free, before returning)
+		STZ	M_PBR			; ? Not used AFAIK in emulation mode; should not be restored if not zero?
+		LDA	M_DBR
 		PHA
-		LDA	M_PC
-		PHA
-		LDA	M_FLAGS
-		PHA
-		LDA     M_B
-                XBA
-		LDA	M_A
+		PLB					; Set up the DBR
 		LDX	M_X
 		LDY	M_Y
-		RTI					; RTI(16)
-; Restore machine to user native context
-RESNN
-		.xl
-		.as
-		REP     #(X_FLAG | D_FLAG)              ; 16 bit index, binary mode
-		.xl
-        SEP     #M_FLAG                         ; 8 bit A (process byte stream)
-		.as
-		LDX	M_SP
-		TXS					; Restore the stack - target stack but we're pointing to free space so OK
-		LDA	M_PBR		; Push Program Bank #
+		LDA	M_DPR+1
+		XBA	
+		LDA	M_DPR
+		TCD					; Always 16 bits; DPR=B*256+A
+		; Set up the RTI frame to restore A, Flags, and PC
+		LDA	M_PC+1			; Set up the RTI frame, PCH
 		PHA
-		LDX	M_PC		; Push PC
-		PHX			; 
+		LDA	M_PC			; Set up the RTI frame, PCL
+		PHA
 		LDA	M_FLAGS
-		PHA			; Flags
-		LDA	M_DBR		; Data bank register
-		PHA			; Last thing off stack before RTI
-		LDA	M_B
-		XBA
-		LDA	M_A
 		PHA
-		LDX	M_DPR
-		PHX
-                LDX	M_X
-		PHX
-		LDY	M_Y
-		PLX
+		; End set up RTI 
+		LDA	M_DPR+1
+		PHA
+		LDA	M_DPR
+		PHA
+		LDA	M_DBR
+		PHA
+		; Restore A & B
+		LDA   M_B
+        XBA
+		LDA	  M_A
+		PLB
 		PLD
-		PLA
-		PLB			; Update data bank register last
-		RTI			; RTI(24) Must use RTI to restore flags & Full 24 bit PC.  No other way!(?)
+		RTI					; RTI(16)
+
 
 ;;; Exception / Reset / Interrupt vectors in native and emulation mode
 * = $FFE4

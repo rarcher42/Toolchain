@@ -173,6 +173,7 @@ class CPU_Pipe:
         self.SERIAL_PORT = port
         self.fifo = FIFO(port, rate, serial.PARITY_NONE, serial.EIGHTBITS, serial.STOPBITS_ONE, 0.1)
         self.v = Frame()
+        self.bp_list = list()
         self.fifo.read()     # Ditch any power on messages or noise bursts
     
     def cmd_dialog(self, cmd):
@@ -213,8 +214,20 @@ class CPU_Pipe:
         sah = ((sa_24 >> 8) & 0xFF).to_bytes(1, 'little')
         sal = ((sa_24) & 0xFF).to_bytes(1, 'little')
         cmd = b'\x04' + sal + sah + sab
-        return self.cmd_dialog(cmd)
-        
+        value = self.cmd_dialog(cmd)       
+        self.bp_list.append((sa_24, value))
+        return value
+       
+    def replace_breaks(self):
+        for bp in self.bp_list:
+            print(bp)
+            adr24 = bp[0]
+            val8 = int.from_bytes(bp[1], 'little')
+            print("Writing %06X: %02X" % (adr24, val8))
+            self.write_mem(adr24, bp[1])
+            self.bp_list.remove(bp)
+        print("Exit bp_list=", self.bp_list)
+    
     def get_registers(self):
         cmd = b'\x05'
         return self.cmd_dialog(cmd)
@@ -454,9 +467,11 @@ if __name__ == "__main__":
     srec_fn = "rammon.hex"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
+    bp_replaced_val = pipe.set_breakpoint(0x200d)   # Set a breakpoint
     print("\nJumping to program")
     res = pipe.jump_long(0x002000)
     pipe.print_registers()
+    pipe.replace_breaks()
     exit(0)
    
     start_t = time.time()

@@ -1,32 +1,30 @@
 
 ; Assembled with 64TASS
-; 	64tass -c binmon.asm -L binmon.lst --intel-hex -o binmon.hex; 
+; 	64tass -c ~.asm -L ~.lst --intel-hex -o ~.hex; 
 ; Put the above equates into an included file per peripheral or board
 
         	.cpu    "65816"
 
-		.INCLUDE "via_symbols.inc"
+		.INCLUDE "cpu_symbols.inc"
 
 
 
-MASK0		= %00000001
-MASK1		= %00000010
-MASK2		= %00000100
-MASK3		= %00001000
-MASK4		= %00010000
-MASK5		= %00100000
-MASK6		= %01000000
-MASK7		= %10000000
+	* 	= $06
+TMP		.byte	?
 
-; Flag definition to OR for SEP, REP
-N_FLAG		= MASK7
-V_FLAG		= MASK6
-M_FLAG		= MASK5
-X_FLAG		= MASK4
-D_FLAG		= MASK3
-I_FLAG		= MASK2
-Z_FLAG		= MASK1
-C_FLAG		= MASK0
+
+	*	= $2000
+	
+RAMSTART
+		SEP	#(M_FLAG | X_FLAG)		
+		SEC
+		XCE				; And enter emulation mode!
+		
+		LDY	#125		; 2025
+		LDX	#12			; December
+		LDA	#25			; 25th (a Thursday)
+		JSR	WEKDAY		; Get the day of the We
+HERE	BRA	HERE		; Put breakpoint at this address!
 
 ; How to compute the day of the week in 6502 assembly.
 ; By Paul Guertin (pg@sff.net), 18 August 2000.
@@ -43,24 +41,6 @@ C_FLAG		= MASK0
 ;        A = day (1 to 31)
 ;
 ; Output: Weekday in A (0=Sunday, 1=Monday, ..., 6=Saturday)
-	* 	= $06
-TMP		.byte	?
-
-
-	*	= $2000
-	
-RAMSTART
-		SEP	#(M_FLAG | X_FLAG)		
-		SEC
-		XCE				; And enter emulation mode!
-		
-		LDY	#125		; 2025
-		LDX	#12			; December
-		LDA	#25			; 25th (a Thursday)
-		JSR	WEKDAY		; Get the day of the Wek!
-		BRK				; and check the results
-HERE	BRA	HERE
-
 WEKDAY:
          CPX #3          ; Year starts in March to bypass
          BCS MARCH       ; leap year problem
