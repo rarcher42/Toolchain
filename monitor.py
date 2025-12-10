@@ -19,7 +19,7 @@ import serial
     returns         [E-flag][Flags][B][A][XL][XH][YL][YH][SPL][SPH][DPRL][DPRH][PCL][PCH][PBR][DBR]
 '''
 
-SER_PORT="COM6"
+SER_PORT="COM4"
 
 class Frame:
     ''' Encapsulate a frame '''
@@ -467,42 +467,11 @@ if __name__ == "__main__":
     srec_fn = "rammon.hex"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
-    bp_replaced_val = pipe.set_breakpoint(0x200d)   # Set a breakpoint
+    bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
     print("\nJumping to program")
     res = pipe.jump_long(0x002000)
     pipe.print_registers()
     pipe.replace_breaks()
     exit(0)
    
-    start_t = time.time()
-    for sa in range(0, 0x010000, 256):
-        mem = pipe.read_mem(sa, 256)
-        dump_hex(sa, mem)
-    end_t = time.time()
-    print("\n\nDumped 64K byte in %10.1f seconds" % (end_t - start_t))
-    print("Rate = %10.1f bytes/second: " % (65536.0 / (end_t - start_t)))
-    
-    exit(1)
-    while True:
-        n = random.randrange(1, 256)
-        inf = b'E'
-        for i in range(n):
-            inf += random.randrange(0, 255).to_bytes(1)
-        outf = v.wire_encode(inf)
-        # print("Writing ", outf)
-        fifo.write(outf)
-        #time.sleep(0.1)
-        reinf = fifo.read()
-        #print("Reading ", reinf)
-        rereinf = v.wire_decode(reinf)
-        print(len(rereinf), "\t", rereinf == inf)
-        if rereinf != inf:
-            print("ERROR: raw string:")
-            print(inf)
-            print("ERROR: wire string:")
-            print(outf)
-            break
-    
-    
-
    
