@@ -21,14 +21,14 @@ BS		= 	$08
 LF		= 	$0A
 CR		= 	$0D
 DLE		= 	$10
-CTRL_P  = DLE
+CTRL_P  = 	DLE
 SP		= 	$20
 DEL		= 	$7F
 ; Frame format characters
-ST_X		= 	$02
-CTRL_B		= 	ST_X
+ST_X	= 	$02
+CTRL_B	= 	ST_X
 ETX		= 	$03
-CTRL_C		= 	ETX
+CTRL_C	= 	ETX
 SOF		= 	ST_X
 EOF		= 	ETX
 ACK		= 	$06
@@ -46,16 +46,16 @@ CMD_ERROR
 CMD_IX		
 		.word	?				; Nexxt char in CMD_BUF  @ *(CMD_BUF + CMD_IX)
 
-EA_L		.byte	?				; 24 bit read pointer LOW
-EA_H		.byte	?				; 	" HIGH
-EA_B		.byte	?				; 	" PAGE #
-EA_PTR		=	EA_L				; Address of EA_PTR
+EA_L	.byte	?				; 24 bit read pointer LOW
+EA_H	.byte	?				; 	" HIGH
+EA_B	.byte	?				; 	" PAGE #
+EA_PTR	=	EA_L				; Address of EA_PTR
 
-CNT_L		.byte	?				; Must be 16 bits to transfer 16 bit index register
-CNT_H		.byte	?
+CNT_L	.byte	?				; Must be 16 bits to transfer 16 bit index register
+CNT_H	.byte	?
 CNT		= 	CNT_L
 
-TEMP		.byte	?
+TEMP	.byte	?
 
 
 SIZE_CMD_BUF	= 	768			; maximum command length - pathological worst case for 256 payload bytes+
@@ -74,18 +74,18 @@ M_EMODE
 								; $01 = Native mode, M=0 X=1 16 bit A,M, 8 bits X,Y
 								; $02 = Native mode, M=1 X=0 8 bits A,M, 16 bits X,Y
 								; $03 = Native mode, M=1 X=1 8 bits A,M, 8 bits X,Y
-M_STATE		=	M_EMODE 
+M_STATE	=	M_EMODE 
 M_FLAGS 				
 		.byte	?				; 8 bits
 M_A		.byte	?				; lower 8 bits of A
 M_B		.byte	?				; B/upper 8 bits of A
 M_X		.word	?				; Always save as 16 bits
 M_Y		.word 	?				; Always save as 16 bits
-M_SP		.word	?				; Always save as 16 bits
-M_DPR		.word	?			; Always 16 bits
-M_PC		.word	?
-M_PBR		.byte	?			; Always 8 bits
-M_DBR       	.byte   ?                       ; Always 8 bits
+M_SP	.word	?				; Always save as 16 bits
+M_DPR	.word	?			; Always 16 bits
+M_PC	.word	?
+M_PBR	.byte	?			; Always 8 bits
+M_DBR	.byte   ?                       ; Always 8 bits
 
 
 
@@ -94,7 +94,7 @@ STACKTOP	= 	$7CFF				; Top of RAM (I/O 0x7F00-0x7FFF)
 
 
 
-* = $F800
+* 	= 	$F800
 		.xl
 		.as
 START 		
@@ -158,7 +158,7 @@ CMD_PC1
 		LDA	CMD_STATE		; get state
 		ASL	A				; two bytes per entry
 		TAX					; 16 bit table offset (B|A)->X
-        	JMP	(CMD_TBL,X)		; execute the current state
+        JMP	(CMD_TBL,X)		; execute the current state
 		; No RTS - that happens in each finite state 
 
 
@@ -179,7 +179,8 @@ CMD_STATE_AWAIT_SOF
 		BNE	CMD_AX1
 		LDA	#2
 		STA	CMD_STATE	
-CMD_AX1 RTS
+CMD_AX1 
+		RTS
 
 ; State 2: COLLECT bytes
 CMD_STATE_COLLECT
@@ -190,7 +191,8 @@ CMD_STATE_COLLECT
 		LDA	#4					; Go process the command
 		STA	CMD_STATE
 		BRA	CMD_CX1				; 
-CMD_CC2		CMP	#DLE
+CMD_CC2	
+		CMP	#DLE
 		BNE	CMD_CC3
 		LDA	#3
 		STA	CMD_STATE
@@ -339,7 +341,7 @@ GO_CMD
 		LDA	CMD_BUF+3
 		STA	EA_B
 		JSR	SEND_ACK
-		JML 	[EA_PTR]
+		JML [EA_PTR]
 		
 ; [04][start-address-low][start-address-high][start-address-high]
 ; returns: replaced byte value (caller is responsible for replacing it!)	
@@ -358,7 +360,7 @@ SET_BP_CMD
 		LDA	#EOF
 		JSR	PUTCH
 		LDA	#$00			; BRK instruction (can't STZ indirect long)
-		STA 	[EA_PTR]		; Save a BRK there
+		STA [EA_PTR]		; Save a BRK there
 		RTS
 
 ; [05] GETCONTEXT
@@ -378,8 +380,6 @@ SSNC1
 		JSR	PUTCH
 		RTS
 		
-		
-
 ; ['E'][data]
 ; replies [data]
 ECHO_CMD
@@ -410,8 +410,8 @@ FIFO_DEBUG 	= 	PB7					; Handy debug toggle
 
 INIT_FIFO
 		LDA	#$FF
-		STA 	SYSTEM_VIA_PCR			; CB2=FAMS=flash A16=1;  CA2=FA15=A15=1; Select flash Bank #3
-		STZ 	SYSTEM_VIA_ACR			; Disable PB7, shift register, timer T1 interrupt.  Not absolutely required while interrupts are disabled FIXME: set up timer
+		STA SYSTEM_VIA_PCR			; CB2=FAMS=flash A16=1;  CA2=FA15=A15=1; Select flash Bank #3
+		STZ SYSTEM_VIA_ACR			; Disable PB7, shift register, timer T1 interrupt.  Not absolutely required while interrupts are disabled FIXME: set up timer
 		STZ	SYSTEM_VIA_DDRA			; Set PA0-PA7 to all inputs
 		STZ	SYSTEM_VIA_DDRB			; In case we're not coming off a reset, make PORT B an input and change output register when it's NOT outputting
 		LDA	#FIFO_RD				;
@@ -428,7 +428,7 @@ GET_FRAW
 		LDA	SYSTEM_VIA_IORB			; Check RXF flag
 		AND	#FIFO_RXF				; If clear, we're OK to read.  If set, there's no data waiting
 		CLC							; Assume no character (overridden if A != 0)
-		BNE 	INFXIT					; If RXF is 1, then no character is waiting!
+		BNE INFXIT					; If RXF is 1, then no character is waiting!
 		STZ	SYSTEM_VIA_DDRA			; Make Port A inputs
 		LDA	#FIFO_RD
 		STA	SYSTEM_VIA_IORB			; RD=1 WR=0 (RD must go to 0 to read
@@ -515,7 +515,8 @@ WENC2
 		LDA	#DLE
 		JSR	PUTCH
 		LDA	#$13
-PUTCH		; Blocking char output
+PUTCH	
+		; Blocking char output
 		JSR	PUT_FRAW
 		BCC	PUTCH
 		RTS
@@ -541,7 +542,7 @@ NAT_SAV_CONTEXT
 		STA	M_B
 		PLA
 		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
-		AND 	#$30			; Figure which E mode
+		AND #$30			; Figure which E mode
 		LSR	A
 		LSR	A
 		LSR	A
@@ -618,13 +619,13 @@ BRK_SAV_CONTEXT
 		SEC
 		SBC	#$02			; Subtract 2 from low address
 		STA	M_PC			; store as low PC
-		STA 	EA_L
+		STA EA_L
 		PLA				; Get high PC PLA sets N and Z but leaves C alone fortunately
 		SBC	#$00			; take care of any borrow from low PC
 		STA	M_PC+1			; 
-		STA 	EA_H
+		STA EA_H
 		STZ	M_PBR			; Probably garbage, but slightly possibly holding future context 
-		TSX				; Now we're pulled everything off stack - it's pre-BRK position
+		TSX					; Now we're pulled everything off stack - it's pre-BRK position
 		STX	M_SP
 		LDA	#$01
 		STA	M_SP+1
@@ -720,7 +721,7 @@ RES_EMU
 		PHA
 		; Restore A & B
 		LDA   M_B
-        	XBA
+        XBA
 		LDA	  M_A
 		PLB
 		PLD
@@ -728,37 +729,37 @@ RES_EMU
 
 
 ;;; Exception / Reset / Interrupt vectors in native and emulation mode
-* = $FFE4
+* 	= 	$FFE4
 NCOP	
 		.word	START		; COP exception in native mode
-* = $FFE6
+* 	= 	$FFE6
 NBRK	
 		.word	NAT_SAV_CONTEXT	; BRK: Save context (coming from native mode)
-* = $FFE8
+* 	= 	$FFE8
 NABORT	
 		.word	START
-* = $FFEA
+* 	= 	$FFEA
 NNMI	
 		.word	NMI_ISR		; NMI interrupt in native mode
-* = $FFEE
+* 	= 	$FFEE
 NIRQ	
 		.word	IRQ_ISR 	; 
 
-* = $FFF4
+* 	= 	$FFF4
 ECOP	
 		.word	START		; COP exception in 65c02 emulation mode
-* = $FFF8
+* 	= 	$FFF8
 EABORT	
 		.word	START
-* = $FFFA
+* 	= 	$FFFA
 ENMI		
 		.word	START		; NMI interrupt in 65c02 emulation mode
-* = $FFFC
+* 	= 	$FFFC
 ERESET	
 		.word	START		; RESET exception in all modes
-* = $FFFE
+* 	= 	$FFFE
 EIRQ	
 		.word	BRK_IRQ_EMU		; Note: when enabling IRQ, must test and pick between IRQ and BRK 
 
-.end					; finally.  das Ende.  Fini.  It's over.  Go home!
+.end							; finally.  das Ende.  Fini.  It's over.  Go home!
 
