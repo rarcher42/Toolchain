@@ -377,6 +377,7 @@ class CPU_Pipe:
                 datastr = li[8:-2]
                 #print(len(datastr), datastr)
                 barry = self.str_to_bytes(datastr)
+                dump_hex(addr, barry)
                 self.write_mem(addr, barry)
             elif rectype == 'S2':
                 ads = li[4:10]
@@ -388,6 +389,7 @@ class CPU_Pipe:
                 datastr = li[10:-2]
                 # print(len(datastr), datastr)
                 barry = self.str_to_bytes(datastr)
+                dump_hex(addr, barry)
                 self.write_mem(addr, barry)
             elif rectype == 'S3':
                 ads = li[4:12]
@@ -400,6 +402,7 @@ class CPU_Pipe:
                 datastr = li[12:-2]
                 #print(len(datastr), datastr)
                 barry = self.str_to_bytes(datastr)
+                dump_hex(addr, barry)
                 self.write_mem(addr, barry)
             elif rectype == 'S5':
                 pass
@@ -464,7 +467,7 @@ def test_go(address):
 
 if __name__ == "__main__":
     pipe = CPU_Pipe(SER_PORT, 921600)
-    srec_fn = "rammon.hex"
+    srec_fn = "rammon.s19"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
     bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint

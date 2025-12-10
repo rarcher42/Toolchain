@@ -25,9 +25,9 @@ START
         LDY #125                    ; 2025
         LDX #12                     ; December
         LDA #25                     ; 25th
-        JSR WEKDAY                  ; Get the day of the Wek!
-HERE    BRA HERE
-
+        JSR WEKDAY                  ; Get the day of the Wek    
+        STP
+        NOP
 
 ; This routine works for any date from 1900-03-01 to 2155-12-31.
 ; No range checking is done, so validate input before calling.
