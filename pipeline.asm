@@ -535,6 +535,7 @@ PUTSY1
 ; return from user code (RAM) to monitor (ROM)
 BRK_NAT_ISR
 		SEP	#M_FLAG			; 
+		.as
 		STA	M_A
 		XBA
 		STA	M_B
