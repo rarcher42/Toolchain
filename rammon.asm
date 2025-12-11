@@ -43,7 +43,6 @@ START
 ; Output: Weekday in A (0=Sunday, 1=Monday, ..., 6=Saturday)
 
 WEKDAY:
-        PHP             ; Save context
         SEP #(M_FLAG | X_FLAG)
         .as
         .xs
@@ -64,8 +63,12 @@ MARCH   EOR #$7F        ; Invert A so carry works right
         LSR
         CLC             ; Add it to y+m+d and fall through
         ADC TMP
+        JSR MOD7
+        RTS
+
 MOD7    ADC #7          ; Returns (A+3) modulo 7
         BCC MOD7        ; for A in 0..255
-        PLP
         RTS
+
+
 MTAB     .TEXT            1,5,6,3,1,5,3,0,4,2,6,4   	; Month offsets

@@ -760,7 +760,7 @@ if __name__ == "__main__":
     srec_fn = "rammon.s19"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
-    bp_replaced_val = pipe.set_breakpoint(0x2036)   # Set a breakpoint
+    bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
     print("\nJumping to program")
     res = pipe.jump_long(0x002000)
     pipe.print_registers()
