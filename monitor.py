@@ -568,6 +568,10 @@ class CPU_Pipe:
             s += "C"
         else:
             s += "-"
+        if (emode):
+            s += " [E]"
+        else:
+            s += " [N]"
         return s
         
     def print_registers(self):
@@ -590,8 +594,6 @@ class CPU_Pipe:
             m_flag = (regs[0] & 0b10)
             x_flag = (regs[0] & 0b01)
             # Print native mode registers
-            s = "E(XM=%02X)=0 " % regs[0]
-            print(s, end="")
             if m_flag:
                 s = "A=%02X," % int.from_bytes(regs[2:3], "little")
                 print(s, end="")
@@ -624,8 +626,6 @@ class CPU_Pipe:
             print(s, end="")
             print(self.decode_flags(regs[1], False))
         else:
-            # Print emulation mode registers
-            print("E=1: ", end="")
             s = "A=%02X," % int.from_bytes(regs[2:3], "little")
             print(s, end="")
             s = "B=%02X," % int.from_bytes(regs[3:4], "little")
@@ -760,7 +760,7 @@ if __name__ == "__main__":
     srec_fn = "rammon.s19"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
-    bp_replaced_val = pipe.set_breakpoint(0x2036)   # Set a breakpoint
+    bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
     print("\nJumping to program")
     res = pipe.jump_long(0x002000)
     pipe.print_registers()

@@ -18,17 +18,40 @@ START
         CLD
         .as
         .xs
-		SEC					        ; Enter 65c02 emulation mode
+		CLC					        ; Enter 65c02 emulation mode OR NOT
 		XCE					        ; 
 		LDX	#$FF			        ; Set 16bit SP to usable RAMtop
 		TXS					
         LDY #125                    ; 2025
         LDX #12                     ; December
         LDA #25                     ; 25th
-        JSR WEKDAY                  ; Get the day of the Wek    
+        JSR DUMBASS                 ; Get the day of the Wek    
         STP
         NOP
 
+
+
+DUMBASS:
+    CLP #(M_FLAG | X_FLAG)
+    .al
+    .xl
+    LDA #0
+    LDX #0
+    LDY #0
+DA1 
+    INX
+    CLC
+    ADC #1
+    CPX #$1234
+    BNE DA1
+DA2
+    INY
+    CLC
+    ADC #1
+    CPY #$5678
+    BNE DA2
+    LDA #$42
+    RTS
 ; This routine works for any date from 1900-03-01 to 2155-12-31.
 ; No range checking is done, so validate input before calling.
 ;
