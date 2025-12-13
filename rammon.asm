@@ -18,39 +18,61 @@ START
         CLD
         .as
         .xs
-		CLC					        ; Enter 65c02 emulation mode OR NOT
+		CLC				            ; Enter 65c02 emulation mode OR NOT
 		XCE					        ; 
-		LDX	#$FF			        ; Set 16bit SP to usable RAMtop
-		TXS					
+        NOP
+        NOP
+        NOP
         LDY #125                    ; 2025
         LDX #12                     ; December
         LDA #25                     ; 25th
-        JSR DUMBASS                 ; Get the day of the Wek    
+        JSR DAM1X0                  ; Get the day of the Wek    
         STP
-        NOP
+HERE    BRA     HERE
 
 
-
-DUMBASS:
-    CLP #(M_FLAG | X_FLAG)
+DAM0X0:
+    REP #(M_FLAG)
     .al
+    REP`#(X_FLAG)
     .xl
-    LDA #0
-    LDX #0
-    LDY #0
-DA1 
-    INX
-    CLC
-    ADC #1
-    CPX #$1234
-    BNE DA1
-DA2
-    INY
-    CLC
-    ADC #1
-    CPY #$5678
-    BNE DA2
-    LDA #$42
+
+    LDX #$1234
+    LDY #$5678
+    LDA #$ABCD
+    RTS
+
+DAM0X1:
+    REP #(M_FLAG)
+    .al
+    SEP`#(X_FLAG)
+    .xs
+
+    LDX #$55
+    LDY #$66
+    LDA #$5432
+    RTS
+
+DAM1X0:
+    SEP #(M_FLAG)
+    .as
+    REP`#(X_FLAG)
+    .xl
+
+    LDX #$3124
+    LDY #$5150
+    LDA #$AB
+    RTS
+
+DAM1X1:
+    REP #(M_FLAG)
+    .as
+    REP`#(X_FLAG)
+    .xs
+
+    LDX #$59
+    LDY #$69
+    LDA #$49
     RTS
 ; This routine works for any date from 1900-03-01 to 2155-12-31.
 ; No range checking is done, so validate input before calling.
