@@ -275,7 +275,7 @@ PCBERR
 		RTS
 
 
-; [01][start-address-Low][start-address-high][start-address-page][LEN]		; 
+; RDMEM[01][start-address-Low][start-address-high][start-address-bank][LEN]		; 
 ; Read n+1 bytes (1 to 256 inclusive) and Return
 ; X / CMD_IX is index to next byte
 RD_CMD	
@@ -303,7 +303,7 @@ RD_BX1
 		JSR	PUTCH			; Unencoded EOF ends frame
 		RTS
 		
-; [02][start-address-Low][start-address-high][start-address-page][b0][b1]...[bn]
+; WRMEM[02][start-address-Low][start-address-high][start-address-bank][b0][b1]...[bn]
 ; Use CMD_IX to determine last write byte
 WR_CMD
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
@@ -330,7 +330,7 @@ WR_BN1
 		RTS
 	
 
-; [03][start-address-low][start-address-high][start-address-high]	
+; GO[03][start-address-low][start-address-high][start-address-bank]	
 GO_CMD	
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
 		STA	EA_L
@@ -341,7 +341,7 @@ GO_CMD
 		JSR	SEND_ACK
 		JML [EA_PTR]
 		
-; [04][start-address-low][start-address-high][start-address-high]
+; SETBP[04][start-address-low][start-address-high][start-addres-bank]
 ; returns: replaced byte value (caller is responsible for replacing it!)	
 SET_BP_CMD	
 		LDA	CMD_BUF+1		; Note: this could be more efficient.  Make it work first.
@@ -361,7 +361,7 @@ SET_BP_CMD
 		STA [EA_PTR]		; Save a BRK there
 		RTS
 
-; [05] GETCONTEXT
+; GETCONTEXT[05]
 ; Returns saved registers in block order 
 ; Returns [E-flag][Flags][A][B][XL][XH][YL][YH][SPL][SPH][DPRL][DPRH][PCL][PCH][PBR][DBR]
 GET_CONTEXT
@@ -380,6 +380,7 @@ SSNC1
 		
 ; ['E'][data]
 ; replies [data]
+; Used for polling CPU to check data path, and also to see if it's in the monitor or running a user program (no response)
 ECHO_CMD
 		LDA	#SOF
 		JSR	PUTCH

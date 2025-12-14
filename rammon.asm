@@ -18,7 +18,7 @@ START
         CLD
         .as
         .xs
-		CLC				            ; Enter 65c02 emulation mode OR NOT
+		SEC				            ; Enter 65c02 emulation mode OR NOT
 		XCE					        ; 
         NOP
         NOP
@@ -26,10 +26,10 @@ START
         LDY #125                    ; 2025
         LDX #12                     ; December
         LDA #25                     ; 25th
-        JSR DAM1X0                  ; Get the day of the Wek    
+        JSR WEKDAY                  ; Get the day of the Wek    
         STP
 HERE    BRA     HERE
-
+        BRK                         ; stop disassembly
 
 DAM0X0:
     REP #(M_FLAG)

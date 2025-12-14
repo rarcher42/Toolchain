@@ -20,294 +20,298 @@ import serial
 '''
 
 SER_PORT="COM4"
+
+IMM=0
 opcode_table = (
 # 00
-("BRK", 2, 2, 2, 2),             # BRK implied
-("ORA", 2, 2, 2, 2),             # ORA (dp, X)
-("COP", 2, 2, 2, 2),             # COP
-("ORA", 2, 2, 2, 2),             # ORA dp
-("TSB", 2, 2, 2, 2),             # TSB dp
-("ORA", 2, 2, 2, 2),             # ORA dp
-("ASL", 2, 2, 2, 2),             # ASL dp
-("ORA", 2, 2, 2, 2),             # ORA (dp)
+# {"MNEMONIC", M0X0-bytes, M0X1 bytes, M1X0 byres, M1X1 bytes, E-bytes, 65c02 bytes, 6502 bytes}
+("BRK", IMM,  1,1,1,1,1,1),              # BRK implied, actually 2 bytes but debugger makes it 1 byte!
+("ORA", IMM,  2,2,2,2,2,2),             # ORA (dp, X)
+("COP", IMM,  2,2,2,2,0,0),             # COP
+("ORA", IMM,  2,2,2,2,0,0),             # ORA dp
+("TSB", IMM,  2,2,2,2,2,0),             # TSB dp
+("ORA", IMM,  2,2,2,2,2,2),             # ORA dp
+("ASL", IMM,  2,2,2,2,2,2),             # ASL dp
+("ORA", IMM,  2,2,2,2,0,0),             # ORA (dp)
 # 08
-("PHP", 1, 1, 1, 1),             # PHP
-("ORA", 2, 3, 3, 2),             # ORA #imm (M-dependent)
-("ASL", 1, 1, 1, 1),             # ASL A
-("PHD", 1, 1, 1, 1),             # PHD
-("TSB", 3, 3, 3, 3),             # TSB abs
-("ORA", 3, 3, 3, 3),             # ORA abs
-("ASL", 3, 3, 3, 3),             # ASL abs
-("ORA", 4, 4, 4, 4),             # ORA long
+("PHP", IMM,  1,1,1,1,1,1),             # PHP
+("ORA", IMM,  3,3,2,3,3,3),             # ORA #imm (M-dependent)
+("ASL", IMM,  1,1,1,1,1,1),             # ASL A
+("PHD", IMM,  1,1,1,1,0,0),             # PHD
+("TSB", IMM,  3,3,3,3,3,0),             # TSB abs
+("ORA", IMM,  3,3,3,3,3,3),             # ORA abs
+("ASL", IMM,  3,3,3,3,3,3),             # ASL abs
+("ORA", IMM,  4,4,4,4,0,0),             # ORA long
 # 10
-("BPL", 2, 2, 2, 2),             # BPL
-("ORA", 2, 2, 2, 2),             # ORA (dp),Y
-("ORA", 2, 2, 2, 2),             # ORA (dp)
-("ORA", 2, 2, 2, 2),             # ORA (dp,S),Y
-("TRB", 2, 2, 2, 2),             # TRB dp
-("ORA", 3, 3, 3, 3),             # ORA dp,X
-("ASL", 2, 2, 2, 2),             # ASL dp,X
-("ORA", 4, 4, 4, 4),             # ORA (dp),Y
+("BPL", IMM,  2,2,2,2,2,2),             # BPL
+("ORA", IMM,  2,2,2,2,2,2),             # ORA (dp),Y
+("ORA", IMM,  2,2,2,2,2,0),             # ORA (dp)
+("ORA", IMM,  2,2,2,2,0,0),             # ORA (dp,S),Y
+("TRB", IMM,  2,2,2,2,2,0),             # TRB dp
+("ORA", IMM,  2,2,2,2,2,2),             # ORA dp,X
+("ASL", IMM,  2,2,2,2,2,2),             # ASL dp,X
+("ORA", IMM,  2,2,2,2,0,0),             # ORA (dp),Y
 # 18
-("CLC", 1, 1, 1, 1),             # CLC
-("ORA", 3, 4, 4, 4),             # ORA abs,Y
-("INC", 1, 1, 1, 1),             # INC A
-("TCS", 1, 1, 1, 1),             # TCS
-("TRB", 3, 3, 3, 3),             # TRB abs
-("ORA", 4, 4, 4, 4),             # ORA abs,X
-("ASL", 3, 3, 3, 3),             # ASL abs,X
-("ORA", 5, 5, 5, 5),             # ORA long,X
+("CLC", IMM,  1,1,1,1,1,1),             # CLC
+("ORA", IMM,  3,3,3,3,3,3),             # ORA abs,Y
+("INC", IMM,  1,1,1,1,1,0),             # INC A
+("TCS", IMM,  1,1,1,1,0,0),             # TCS
+("TRB", IMM,  3,3,3,3,3,0),             # TRB abs
+("ORA", IMM,  3,3,3,3,3,3),             # ORA abs,X
+("ASL", IMM,  3,3,3,3,3,3),             # ASL abs,X
+("ORA", IMM,  4,4,4,4,0,0),             # ORA long,X
 # 20
-("JSR", 3, 3, 3, 3),             # JSR abs
-("AND", 2, 2, 2, 2),             # AND (dp,X)
-("JSL", 4, 4, 4, 4),             # JSL long
-("AND", 2, 2, 2, 2),             # AND dp
-("BIT", 2, 2, 2, 2),             # BIT dp
-("AND", 2, 2, 2, 2),             # AND dp
-("ROL", 2, 2, 2, 2),             # ROL dp
-("AND", 2, 2, 2, 2),             # AND (dp)
+("JSR", IMM,  3,3,3,3,3,3),             # JSR abs
+("AND", IMM,  2,2,2,2,2,2),             # AND (dp,X)
+("JSL", IMM,  4,4,4,4,0,0),             # JSL long
+("AND", IMM,  2,2,2,2,0,0),             # AND dp
+("BIT", IMM,  2,2,2,2,2,2),             # BIT dp
+("AND", IMM,  2,2,2,2,2,2),             # AND dp
+("ROL", IMM,  2,2,2,2,2,2),             # ROL dp
+("AND", IMM,  2,2,2,2,0,0),             # AND (dp)
 # 28
-("PLP", 1, 1, 1, 1),             # PLP
-("AND", 2, 3, 3, 2),             # AND #imm (M-dependent)
-("ROL", 1, 1, 1, 1),             # ROL A
-("PLD", 1, 1, 1, 1),             # PLD
-("BIT", 3, 3, 3, 3),             # BIT abs
-("AND", 3, 3, 3, 3),             # AND abs
-("ROL", 3, 3, 3, 3),             # ROL abs
-("AND", 4, 4, 4, 4),             # AND long# 30
-("BMI", 2, 2, 2, 2),             # BMI
-("AND", 2, 2, 2, 2),             # AND (dp),Y
-("AND", 2, 2, 2, 2),             # AND (dp)
-("AND", 2, 2, 2, 2),             # AND (dp,S),Y
-("BIT", 2, 2, 2, 2),             # BIT dp,X
-("AND", 3, 3, 3, 3),             # AND dp,X
-("ROL", 2, 2, 2, 2),             # ROL dp,X
-("AND", 4, 4, 4, 4),             # AND (dp),Y
+("PLP", IMM,  1,1,1,1,1,1),             # PLP
+("AND", IMM,  3,3,2,3,3,3),             # AND #imm (M-dependent)
+("ROL", IMM,  1,1,1,1,1,1),             # ROL A
+("PLD", IMM,  1,1,1,1,0,0),             # PLD
+("BIT", IMM,  3,3,3,3,3,3),             # BIT abs
+("AND", IMM,  3,3,3,3,3,3),             # AND abs
+("ROL", IMM,  3,3,3,3,3,3),             # ROL abs
+("AND", IMM,  4,4,4,4,0,0),             # AND long# 30
+#30               
+("BMI", IMM,  2,2,2,2,2,2),             # BMI 
+("AND", IMM,  2,2,2,2,2,2),             # AND (dp),Y
+("AND", IMM,  2,2,2,2,2,0),             # AND (dp)
+("AND", IMM,  2,2,2,2,0,0),             # AND (dp,S),Y
+("BIT", IMM,  2,2,2,2,2,0),             # BIT dp,X
+("AND", IMM,  2,2,2,2,2,2),             # AND dp,X
+("ROL", IMM,  2,2,2,2,2,2),             # ROL dp,X
+("AND", IMM,  2,2,2,2,0,0),             # AND (dp),Y
 # 38
-("SEC", 1, 1, 1, 1),             # SEC
-("AND", 3, 4, 4, 4),             # AND abs,Y
-("DEC", 1, 1, 1, 1),             # DEC A
-("TSC", 1, 1, 1, 1),             # TSC
-("BIT", 3, 3, 3, 3),             # BIT abs
-("AND", 4, 4, 4, 4),             # AND abs,X
-("ROL", 3, 3, 3, 3),             # ROL abs,X
-("AND", 5, 5, 5, 5),             # AND long,X
+("SEC", IMM,  1,1,1,1,1,1),             # SEC
+("AND", IMM,  3,3,3,3,3,3),             # AND abs,Y
+("DEC", IMM,  1,1,1,1,1,0),             # DEC A
+("TSC", IMM,  1,1,1,1,0,0),             # TSC
+("BIT", IMM,  3,3,3,3,3,0),             # BIT
+("AND", IMM,  3,3,3,3,3,3),             # AND abs,X
+("ROL", IMM,  3,3,3,3,3,3),             # ROL abs,X
+("AND", IMM,  4,4,4,4,0,0),             # AND long,X
 # 40
-("RTI", 1, 1, 1, 1),             # RTI
-("EOR", 2, 2, 2, 2),             # EOR (dp,X)
-("WDM", 2, 2, 2, 2),             # WDM
-("EOR", 2, 2, 2, 2),             # EOR dp
-("MVN", 3, 3, 3, 3),             # MVN src,dst
-("EOR", 2, 2, 2, 2),             # EOR dp
-("LSR", 2, 2, 2, 2),             # LSR dp
-("EOR", 2, 2, 2, 2),             # EOR (dp)
+("RTI", IMM,  1,1,1,1,1,1),             # RTI
+("EOR", IMM,  2,2,2,2,0,0),             # EOR (dp,X)
+("WDM", IMM,  2,2,2,2,0,0),             # WDM
+("EOR", IMM,  2,2,2,2,0,0),             # EOR dp
+("MVN", IMM,  3,3,3,3,0,0),             # MVN src,dst
+("EOR", IMM,  2,2,2,2,2,2),             # EOR dp
+("LSR", IMM,  2,2,2,2,2,2),             # LSR dp
+("EOR", IMM,  2,2,2,2,0,0),             # EOR (dp)
 # 48
-("PHA", 1, 1, 1, 1),             # PHA
-("EOR", 2, 3, 3, 2),             # EOR #imm (M-dependent)
-("LSR", 1, 1, 1, 1),             # LSR A
-("PHK", 1, 1, 1, 1),             # PHK
-("JMP", 3, 3, 3, 3),             # JMP abs
-("EOR", 3, 3, 3, 3),             # EOR abs
-("LSR", 3, 3, 3, 3),             # LSR abs
-("EOR", 4, 4, 4, 4),             # EOR long
+("PHA", IMM,  1,1,1,1,1,1),             # PHA
+("EOR", IMM,  3,3,2,3,3,3),             # EOR #imm (M-dependent)
+("LSR", IMM,  1,1,1,1,1,1),             # LSR A
+("PHK", IMM,  1,1,1,1,0,0),             # PHK
+("JMP", IMM,  3,3,3,3,3,3),             # JMP abs
+("EOR", IMM,  3,3,3,3,3,3),             # EOR abs
+("LSR", IMM,  3,3,3,3,3,3),             # LSR abs
+("EOR", IMM,  4,4,4,4,0,0),             # EOR long
 # 50
-("BVC", 2, 2, 2, 2),             # BVC
-("EOR", 2, 2, 2, 2),             # EOR (dp),Y
-("EOR", 2, 2, 2, 2),             # EOR (dp)
-("EOR", 2, 2, 2, 2),             # EOR (dp,S),Y
-("MVN", 3, 3, 3, 3),             # MVN (mirrors 44; same encoding rules)
-("EOR", 3, 3, 3, 3),             # EOR dp,X
-("LSR", 2, 2, 2, 2),             # LSR dp,X
-("EOR", 4, 4, 4, 4),             # EOR (dp),Y
+("BVC", IMM,  2,2,2,2,2,2),             # BVC
+("EOR", IMM,  2,2,2,2,2,2),             # EOR (dp),Y
+("EOR", IMM,  2,2,2,2,2,0),             # EOR (dp)
+("EOR", IMM,  2,2,2,2,0,0),             # EOR (dp,S),Y
+("MVN", IMM,  3,3,3,3,0,0),             # MVN (mirrors 44; same encoding rules)
+("EOR", IMM,  2,2,2,2,2,2),             # EOR dp,X
+("LSR", IMM,  2,2,2,2,2,2),             # LSR dp,X
+("EOR", IMM,  2,2,2,2,0,0),             # EOR (dp),Y
 # 58
-("CLI", 1, 1, 1, 1),             # CLI
-("EOR", 3, 4, 4, 4),             # EOR abs,Y
-("PHY", 1, 1, 1, 1),             # PHY
-("TCD", 1, 1, 1, 1),             # TCD
-("JMP", 3, 3, 3, 3),             # JMP (abs)
-("EOR", 4, 4, 4, 4),             # EOR abs,X
-("LSR", 3, 3, 3, 3),             # LSR abs,X
-("EOR", 5, 5, 5, 5),             # EOR long,X
+("CLI", IMM,  1,1,1,1,1,1),             # CLI
+("EOR", IMM,  3,3,3,3,3,3),             # EOR abs,Y
+("PHY", IMM,  1,1,1,1,1,0),             # PHY
+("TCD", IMM,  1,1,1,1,0,0),             # TCD
+("JML", IMM,  4,4,4,4,0,0),             # JML (abs)
+("EOR", IMM,  3,3,3,3,3,3),             # EOR abs,X
+("LSR", IMM,  3,3,3,3,3,3),             # LSR abs,X
+("EOR", IMM,  4,4,4,4,0,0),             # EOR long,X
 # 60
-("RTS", 1, 1, 1, 1),             # RTS
-("ADC", 2, 2, 2, 2),             # ADC (dp,X)
-("PER", 3, 3, 3, 3),             # PER relative long
-("ADC", 2, 2, 2, 2),             # ADC dp
-("STZ", 2, 2, 2, 2),             # STZ dp
-("ADC", 2, 2, 2, 2),             # ADC dp
-("ROR", 2, 2, 2, 2),             # ROR dp
-("ADC", 2, 2, 2, 2),             # ADC (dp)
+("RTS", IMM,  1,1,1,1,1,1),             # RTS
+("ADC", IMM,  2,2,2,2,2,2),             # ADC (dp,X)
+("PER", IMM,  3,3,3,3,0,0),             # PER relative long
+("ADC", IMM,  2,2,2,2,0,0),             # ADC dp
+("STZ", IMM,  2,2,2,2,2,0),             # STZ dp
+("ADC", IMM,  2,2,2,2,2,2),             # ADC dp
+("ROR", IMM,  2,2,2,2,2,2),             # ROR dp
+("ADC", IMM,  2,2,2,2,0,0),             # ADC (dp)
 # 68
-("PLA", 1, 1, 1, 1),             # PLA
-("ADC", 2, 3, 3, 2),             # ADC #imm (M-dependent)
-("ROR", 1, 1, 1, 1),             # ROR A
-("RTL", 1, 1, 1, 1),             # RTL
-("JMP", 3, 3, 3, 3),             # JMP abs long indirect: JMP (abs)
-("ADC", 3, 3, 3, 3),             # ADC abs
-("ROR", 3, 3, 3, 3),             # ROR abs
-("ADC", 4, 4, 4, 4),             # ADC long
+("PLA", IMM,  1,1,1,1,1,1),             # PLA
+("ADC", IMM,  3,3,2,3,3,3),             # ADC #imm (M-dependent)
+("ROR", IMM,  1,1,1,1,1,1),             # ROR A
+("RTL", IMM,  1,1,1,1,0,0),             # RTL
+("JMP", IMM,  3,3,3,3,3,3),             # JMP abs long indirect: JMP (abs)
+("ADC", IMM,  3,3,3,3,3,3),             # ADC abs
+("ROR", IMM,  3,3,3,3,3,3),             # ROR abs
+("ADC", IMM,  4,4,4,4,0,0),             # ADC long
 # 70
-("BVS", 2, 2, 2, 2),             # BVS
-("ADC", 2, 2, 2, 2),             # ADC (dp),Y
-("ADC", 2, 2, 2, 2),             # ADC (dp)
-("ADC", 2, 2, 2, 2),             # ADC (dp,S),Y
-("STZ", 2, 2, 2, 2),             # STZ dp,X
-("ADC", 3, 3, 3, 3),             # ADC dp,X
-("ROR", 2, 2, 2, 2),             # ROR dp,X
-("ADC", 4, 4, 4, 4),             # ADC (dp),Y
+("BVS", IMM,  2,2,2,2,2,2),             # BVS
+("ADC", IMM,  2,2,2,2,2,2),             # ADC (dp),Y
+("ADC", IMM,  2,2,2,2,2,2),             # ADC (dp)
+("ADC", IMM,  2,2,2,2,0,0),             # ADC (dp,S),Y
+("STZ", IMM,  2,2,2,2,2,0),             # STZ dp,X
+("ADC", IMM,  2,2,2,2,2,2),             # ADC dp,X
+("ROR", IMM,  2,2,2,2,2,2),             # ROR dp,X
+("ADC", IMM,  2,2,2,2,0,0),             # ADC (dp),Y
 # 78
-("SEI", 1, 1, 1, 1),             # SEI
-("ADC", 3, 4, 4, 4),             # ADC abs,Y
-("PLY", 1, 1, 1, 1),             # PLY
-("TDC", 1, 1, 1, 1),             # TDC
-("JMP", 3, 3, 3, 3),             # JMP (abs,X)
-("ADC", 4, 4, 4, 4),             # ADC abs,X
-("ROR", 3, 3, 3, 3),             # ROR abs,X
-("ADC", 5, 5, 5, 5),             # ADC long,X
+("SEI", IMM,  1,1,1,1,1,1),             # SEI
+("ADC", IMM,  3,3,3,3,3,3),             # ADC abs,Y
+("PLY", IMM,  1,1,1,1,1,0),             # PLY
+("TDC", IMM,  1,1,1,1,0,0),             # TDC
+("JMP", IMM,  3,3,3,3,3,0),             # JMP (abs,X)
+("ADC", IMM,  3,3,3,3,3,3),             # ADC abs,X
+("ROR", IMM,  3,3,3,3,3,3),             # ROR abs,X
+("ADC", IMM,  4,4,4,4,0,0),             # ADC long,X
 # 80
-("BRA", 2, 2, 2, 2),             # BRA
-("STA", 2, 2, 2, 2),             # STA (dp,X)
-("BRL", 3, 3, 3, 3),             # BRL
-("STA", 2, 2, 2, 2),             # STA dp
-("STY", 2, 2, 2, 2),             # STY dp
-("STA", 2, 2, 2, 2),             # STA dp
-("STX", 2, 2, 2, 2),             # STX dp
-("STA", 2, 2, 2, 2),             # STA (dp)
+("BRA", IMM,  2,2,2,2,2,0),             # BRA
+("STA", IMM,  2,2,2,2,2,2),             # STA (dp,X)
+("BRL", IMM,  3,3,3,3,0,0),             # BRL
+("STA", IMM,  2,2,2,2,0,0),             # STA 1,S
+("STY", IMM,  2,2,2,2,2,2),             # STY dp
+("STA", IMM,  2,2,2,2,2,2),             # STA dp
+("STX", IMM,  2,2,2,2,2,2),             # STX dp
+("STA", IMM,  2,2,2,2,0,0),             # STA SR
 # 88
-("DEY", 1, 1, 1, 1),             # DEY
-("BIT", 2, 3, 3, 2),             # BIT #imm (M-dependent)
-("TXA", 1, 1, 1, 1),             # TXA
-("PHB", 1, 1, 1, 1),             # PHB
-("STY", 3, 3, 3, 3),             # STY abs
-("STA", 3, 3, 3, 3),             # STA abs
-("STX", 3, 3, 3, 3),             # STX abs
-("STA", 4, 4, 4, 4),             # STA long
+("DEY", IMM,  1,1,1,1,1,1),             # DEY
+("BIT", IMM,  3,3,2,3,3,0),             # BIT #imm (M-dependent)
+("TXA", IMM,  1,1,1,1,1,1),             # TXA
+("PHB", IMM,  1,1,1,1,0,0),             # PHB
+("STY", IMM,  3,3,3,3,3,3),             # STY abs
+("STA", IMM,  3,3,3,3,3,3),             # STA abs
+("STX", IMM,  3,3,3,3,3,3),             # STX abs
+("STA", IMM,  4,4,4,4,0,0),             # STA long
 # 90
-("BCC", 2, 2, 2, 2),             # BCC
-("STA", 2, 2, 2, 2),             # STA (dp),Y
-("STA", 2, 2, 2, 2),             # STA (dp)
-("STA", 2, 2, 2, 2),             # STA (dp,S),Y
-("STY", 2, 2, 2, 2),             # STY dp,X
-("STA", 3, 3, 3, 3),             # STA dp,X
-("STX", 2, 2, 2, 2),             # STX dp,Y
-("STA", 4, 4, 4, 4),             # STA (dp),Y
+("BCC", IMM,  2,2,2,2,2,2),             # BCC
+("STA", IMM,  2,2,2,2,2,2),             # STA (dp),Y
+("STA", IMM,  2,2,2,2,2,0),             # STA (dp)
+("STA", IMM,  2,2,2,2,0,0),             # STA (dp,S),Y
+("STY", IMM,  2,2,2,2,2,2),             # STY dp,X
+("STA", IMM,  2,2,2,2,2,2),             # STA dp,X
+("STX", IMM,  2,2,2,2,2,2),             # STX dp,Y
+("STA", IMM,  2,2,2,2,0,0),             # STA (dp),Y
 # 98
-("TYA", 1, 1, 1, 1),             # TYA
-("STA", 3, 4, 4, 4),             # STA abs,Y
-("TXS", 1, 1, 1, 1),             # TXS
-("TXY", 1, 1, 1, 1),             # TXY
-("STZ", 3, 3, 3, 3),             # STZ abs
-("STA", 4, 4, 4, 4),             # STA abs,X
-("STZ", 3, 3, 3, 3),             # STZ abs,X
-("STA", 5, 5, 5, 5),             # STA long,X
+("TYA", IMM,  1,1,1,1,1,1),             # TYA
+("STA", IMM,  3,3,3,3,3,3),             # STA abs,Y
+("TXS", IMM,  1,1,1,1,1,1),             # TXS
+("TXY", IMM,  1,1,1,1,0,0),             # TXY
+("STZ", IMM,  3,3,3,3,3,0),             # STZ abs
+("STA", IMM,  3,3,3,3,3,3),             # STA abs,X
+("STZ", IMM,  3,3,3,3,3,0),             # STZ abs,X
+("STA", IMM,  4,4,4,4,0,0),             # STA long,X
 # A0
-("LDY", 2, 3, 2, 3),             # LDY #imm (X-dependent)
-("LDA", 2, 3, 3, 2),             # LDA #imm (M-dependent)
-("LDX", 2, 3, 2, 3),             # LDX #imm (X-dependent)
-("LDA", 2, 2, 2, 2),             # LDA dp
-("LDY", 2, 2, 2, 2),             # LDY dp
-("LDA", 2, 2, 2, 2),             # LDA dp
-("LDX", 2, 2, 2, 2),             # LDX dp
-("LDA", 2, 2, 2, 2),             # LDA (dp)
+("LDY", IMM,  3,2,3,2,3,3),             # LDY #imm (X-dependent)
+("LDA", IMM,  2,2,2,2,2,2),             # LDA #imm (M-dependent)
+("LDX", IMM,  3,2,3,2,3,3),             # LDX #imm (X-dependent)
+("LDA", IMM,  2,2,2,2,0,0),             # LDA SR
+("LDY", IMM,  2,2,2,2,2,2),             # LDY dp
+("LDA", IMM,  2,2,2,2,2,2),             # LDA dp
+("LDX", IMM,  2,2,2,2,2,2),             # LDX dp
+("LDA", IMM,  2,2,2,2,0,0),             # LDA (dp)
 # A8
-("TAY", 1, 1, 1, 1),             # TAY
-("LDA", 2, 3, 3, 2),             # LDA #imm (duplicate immediate forms only differ by mnemonic)
-("TAX", 1, 1, 1, 1),             # TAX
-("PLB", 1, 1, 1, 1),             # PLB
-("LDY", 3, 3, 3, 3),             # LDY abs
-("LDA", 3, 3, 3, 3),             # LDA abs
-("LDX", 3, 3, 3, 3),             # LDX abs
-("LDA", 4, 4, 4, 4),             # LDA long
+("TAY", IMM,  1,1,1,1,1,1),             # TAY
+("LDA", IMM,  3,3,2,3,3,3),             # LDA #imm (duplicate immediate forms only differ by mnemonic)
+("TAX", IMM,  1,1,1,1,1,1),             # TAX
+("PLB", IMM,  1,1,1,1,0,0),             # PLB
+("LDY", IMM,  3,3,3,3,3,3),             # LDY abs
+("LDA", IMM,  3,3,3,3,3,3),             # LDA abs
+("LDX", IMM,  3,3,3,3,3,3),             # LDX abs
+("LDA", IMM,  4,4,4,4,0,0),             # LDA long
 # B0
-("BCS", 2, 2, 2, 2),             # BCS
-("LDA", 2, 2, 2, 2),             # LDA (dp),Y
-("LDA", 2, 2, 2, 2),             # LDA (dp)
-("LDA", 2, 2, 2, 2),             # LDA (dp,S),Y
-("LDY", 2, 2, 2, 2),             # LDY dp,X
-("LDA", 3, 3, 3, 3),             # LDA dp,X
-("LDX", 2, 2, 2, 2),             # LDX dp,Y
-("LDA", 4, 4, 4, 4),             # LDA (dp),Y
+("BCS", IMM,  2,2,2,2,2,2),             # BCS
+("LDA", IMM,  2,2,2,2,2,2),             # LDA (dp),Y
+("LDA", IMM,  2,2,2,2,2,0),             # LDA (dp)
+("LDA", IMM,  2,2,2,2,0,0),             # LDA (dp,S),Y
+("LDY", IMM,  2,2,2,2,2,2),             # LDY dp,X
+("LDA", IMM,  2,2,2,2,2,2),             # LDA dp,X
+("LDX", IMM,  2,2,2,2,2,2),             # LDX dp,Y
+("LDA", IMM,  2,2,2,2,0,0),             # LDA (dp),Y
 # B8
-("CLV", 1, 1, 1, 1),             # CLV
-("LDA", 3, 4, 4, 4),             # LDA abs,Y
-("TSX", 1, 1, 1, 1),             # TSX
-("TYX", 1, 1, 1, 1),             # TYX
-("LDY", 3, 3, 3, 3),             # LDY abs
-("LDA", 4, 4, 4, 4),             # LDA abs,X
-("LDX", 3, 3, 3, 3),             # LDX abs,Y
-("LDA", 5, 5, 5, 5),             # LDA long,X
+("CLV", IMM,  1,1,1,1,1,1),             # CLV
+("LDA", IMM,  3,3,3,3,3,3),             # LDA abs,Y
+("TSX", IMM,  1,1,1,1,1,1),             # TSX
+("TYX", IMM,  1,1,1,1,0,0),             # TYX
+("LDY", IMM,  3,3,3,3,3,3),             # LDY abs
+("LDA", IMM,  3,3,3,3,3,3),             # LDA abs,X
+("LDX", IMM,  3,3,3,3,3,3),             # LDX abs,Y
+("LDA", IMM,  4,4,4,4,0,0),             # LDA long,X
 # C0
-("CPY", 2, 3, 2, 3),             # CPY #imm (X-dependent)
-("CMP", 2, 2, 2, 2),             # CMP (dp,X)
-("REP", 2, 2, 2, 2),             # REP #imm (always 2-byte immediate)
-("CMP", 2, 2, 2, 2),             # CMP dp
-("CPY", 2, 2, 2, 2),             # CPY dp
-("CMP", 2, 2, 2, 2),             # CMP dp
-("DEC", 2, 2, 2, 2),             # DEC dp
-("CMP", 2, 2, 2, 2),             # CMP (dp)
+("CPY", IMM,  3,2,3,2,3,3),             # CPY #imm (X-dependent)
+("CMP", IMM,  2,2,2,2,2,2),             # CMP (dp,X)
+("REP", IMM,  2,2,2,2,0,0),             # REP #imm (always 2-byte immediate)
+("CMP", IMM,  2,2,2,2,0,0),             # CMP 1,S
+("CPY", IMM,  2,2,2,2,2,2),             # CPY dp
+("CMP", IMM,  2,2,2,2,2,2),             # CMP dp
+("DEC", IMM,  2,2,2,2,2,2),             # DEC dp
+("CMP", IMM,  2,2,2,2,0,0),             # CMP (dp)
 # C8
-("INY", 1, 1, 1, 1),             # INY
-("CMP", 2, 3, 3, 2),             # CMP #imm (M-dependent)
-("DEX", 1, 1, 1, 1),             # DEX
-("WAI", 1, 1, 1, 1),             # WAI
-("CPY", 3, 3, 3, 3),             # CPY abs
-("CMP", 3, 3, 3, 3),             # CMP abs
-("DEC", 3, 3, 3, 3),             # DEC abs
-("CMP", 4, 4, 4, 4),             # CMP long
+("INY", IMM,  1,1,1,1,1,1),             # INY
+("CMP", IMM,  3,3,2,3,3,3),             # CMP #imm (M-dependent)
+("DEX", IMM,  1,1,1,1,1,1),             # DEX
+("WAI", IMM,  1,1,1,1,1,0),             # WAI
+("CPY", IMM,  3,3,3,3,3,3),             # CPY abs
+("CMP", IMM,  3,3,3,3,3,3),             # CMP abs
+("DEC", IMM,  3,3,3,3,3,3),             # DEC abs
+("CMP", IMM,  4,4,4,4,0,0),             # CMP long
 # D0
-("BNE", 2, 2, 2, 2),             # BNE
-("CMP", 2, 2, 2, 2),             # CMP (dp),Y
-("CMP", 2, 2, 2, 2),             # CMP (dp)
-("CMP", 2, 2, 2, 2),             # CMP (dp,S),Y
-("PEI", 2, 2, 2, 2),             # PEI dp
-("CMP", 3, 3, 3, 3),             # CMP dp,X
-("DEC", 2, 2, 2, 2),             # DEC dp,X
-("CMP", 4, 4, 4, 4),             # CMP (dp),Y
+("BNE", IMM,  2,2,2,2,2,2),             # BNE
+("CMP", IMM,  2,2,2,2,2,2),             # CMP (dp),Y
+("CMP", IMM,  2,2,2,2,2,0),             # CMP (dp)
+("CMP", IMM,  2,2,2,2,0,0),             # CMP (dp,S),Y
+("PEI", IMM,  2,2,2,2,0,0),             # PEI dp
+("CMP", IMM,  2,2,2,2,2,2),             # CMP dp,X
+("DEC", IMM,  2,2,2,2,2,2),             # DEC dp,X
+("CMP", IMM,  2,2,2,2,0,0),             # CMP (dp),Y
 # D8
-("CLD", 1, 1, 1, 1),             # CLD
-("CMP", 3, 4, 4, 4),             # CMP abs,Y
-("PHX", 1, 1, 1, 1),             # PHX
-("STP", 1, 1, 1, 1),             # STP
-("JML", 3, 3, 3, 3),             # JML abs long indirect
-("CMP", 4, 4, 4, 4),             # CMP abs,X
-("DEC", 3, 3, 3, 3),             # DEC abs,X
-("CMP", 5, 5, 5, 5),             # CMP long,X
+("CLD", IMM,  1,1,1,1,1,1),             # CLD
+("CMP", IMM,  3,3,3,3,3,3),             # CMP abs,Y
+("PHX", IMM,  1,1,1,1,1,0),             # PHX
+("STP", IMM,  1,1,1,1,1,0),             # STP
+("JML", IMM,  3,3,3,3,0,0),             # JML abs long indirect
+("CMP", IMM,  3,3,3,3,3,3),             # CMP abs,X
+("DEC", IMM,  3,3,3,3,3,3),             # DEC abs,X
+("CMP", IMM,  4,4,4,4,0,0),             # CMP long,X
 # E0
-("CPX", 2, 3, 2, 3),             # CPX #imm (X-dependent)
-("SBC", 2, 2, 2, 2),             # SBC (dp,X)
-("SEP", 2, 2, 2, 2),             # SEP #imm (always 2 bytes)
-("SBC", 2, 2, 2, 2),             # SBC dp
-("CPX", 2, 2, 2, 2),             # CPX dp
-("SBC", 2, 2, 2, 2),             # SBC dp
-("INC", 2, 2, 2, 2),             # INC dp
-("SBC", 2, 2, 2, 2),             # SBC (dp)
+("CPX", IMM,  3,2,3,2,3,3),             # CPX #imm (X-dependent)
+("SBC", IMM,  2,2,2,2,2,2),             # SBC (dp,X)
+("SEP", IMM,  2,2,2,2,0,0),             # SEP #imm (always 2 bytes)
+("SBC", IMM,  2,2,2,2,0,0),             # SBC dp
+("CPX", IMM,  2,2,2,2,2,2),             # CPX dp
+("SBC", IMM,  2,2,2,2,2,2),             # SBC dp
+("INC", IMM,  2,2,2,2,2,2),             # INC dp
+("SBC", IMM,  2,2,2,2,0,0),             # SBC (dp)
 # E8
-("INX", 1, 1, 1, 1),             # INX
-("SBC", 2, 3, 3, 2),             # SBC #imm (M-dependent)
-("NOP", 1, 1, 1, 1),             # NOP
-("XBA", 1, 1, 1, 1),             # XBA
-("INC", 3, 3, 3, 3),             # INC abs
-("SBC", 3, 3, 3, 3),             # SBC abs
-("INC", 3, 3, 3, 3),             # INC abs
-("SBC", 4, 4, 4, 4),             # SBC long
+("INX", IMM,  1,1,1,1,1,1),             # INX
+("SBC", IMM,  3,3,2,3,3,3),             # SBC #imm (M-dependent)
+("NOP", IMM,  1,1,1,1,1,1),             # NOP
+("XBA", IMM,  1,1,1,1,0,0),             # XBA
+("INC", IMM,  3,3,3,3,3,3),             # INC abs
+("SBC", IMM,  3,3,3,3,3,3),             # SBC abs
+("INC", IMM,  3,3,3,3,3,3),             # INC abs
+("SBC", IMM,  4,4,4,4,0,0),             # SBC long
 # F0
-("BEQ", 2, 2, 2, 2),             # BEQ
-("SBC", 2, 2, 2, 2),             # SBC (dp),Y
-("SBC", 2, 2, 2, 2),             # SBC (dp)
-("SBC", 2, 2, 2, 2),             # SBC (dp,S),Y
-("PEA", 3, 3, 3, 3),             # PEA abs
-("SBC", 3, 3, 3, 3),             # SBC dp,X
-("INC", 2, 2, 2, 2),             # INC dp,X
-("SBC", 4, 4, 4, 4),             # SBC (dp),Y
+("BEQ", IMM,  2,2,2,2,2,2),             # BEQ
+("SBC", IMM,  2,2,2,2,2,2),             # SBC (dp),Y
+("SBC", IMM,  2,2,2,2,2,0),             # SBC (dp)
+("SBC", IMM,  2,2,2,2,0,0),             # SBC (dp,S),Y
+("PEA", IMM,  3,3,3,3,0,0),             # PEA abs
+("SBC", IMM,  2,2,2,2,2,2),             # SBC dp,X
+("INC", IMM,  2,2,2,2,2,2),             # INC dp,X
+("SBC", IMM,  2,2,2,2,0,0),             # SBC (dp),Y
 # F8
-("SED", 1, 1, 1, 1),             # SED
-("SBC", 3, 4, 4, 4),             # SBC abs,Y
-("PLX", 1, 1, 1, 1),             # PLX
-("XCE", 1, 1, 1, 1),             # XCE
-("JSR", 3, 3, 3, 3),             # JSR (abs,X)
-("SBC", 4, 4, 4, 4),             # SBC abs,X
-("INC", 3, 3, 3, 3),             # INC abs,X
-("SBC", 5, 5, 5, 5)              # SBC long,X
+("SED", IMM,  1,1,1,1,1,1),             # SED
+("SBC", IMM,  3,3,3,3,3,3),             # SBC abs,Y
+("PLX", IMM,  1,1,1,1,1,0),             # PLX
+("XCE", IMM,  1,1,1,1,0,0),             # XCE
+("JSR", IMM,  3,3,3,3,0,0),             # JSR (abs,X)
+("SBC", IMM,  3,3,3,3,3,3),             # SBC abs,X
+("INC", IMM,  3,3,3,3,3,3),             # INC abs,X
+("SBC", IMM,  4,4,4,4,0,0)              # SBC long,X
 )
 
 class Frame:
@@ -464,7 +468,10 @@ class CPU_Pipe:
         self.v = Frame()
         self.bp_list = list()
         self.fifo.read()     # Ditch any power on messages or noise bursts
-    
+        self.e_flag = True   # Assume something.  Correct it upon first status read
+        self.m_flag = True
+        self.x_flag = True
+
     def cmd_dialog(self, cmd):
         outf = self.v.wire_encode(cmd)
         self.fifo.write(outf)
@@ -640,6 +647,41 @@ class CPU_Pipe:
             print(s, end="")
             print(self.decode_flags(regs[1], True))
             
+    def get_offset(self):
+        # Get table offset according to settings of E=4+2, if E=0 2*M+X+2
+        if (self.e_flag):
+            return 3+2      # For now, use M1X1 entry
+        if (self.m_flag):
+            val = 2
+        else:
+            val = 0
+        if (self.x_flag):
+            val += 1
+        return val+2    # Location of instruction length
+
+    def get_instruction_at(self, addr):
+        # Get the instruction byte
+        op = self.read_mem(addr, 1)
+        opv = int.from_bytes(op, "little")
+        offset = self.get_offset()
+        oplen = opcode_table[opv][offset]
+        if (oplen > 1):
+            instr = self.read_mem(addr, oplen)
+        else:
+            instr = op
+        return instr
+
+
+    def print_instruction_at(self, addr):
+        instr = self.get_instruction_at(addr)
+        opv = int.from_bytes(instr[0:1], "little")
+        ns = self.mnemonic = opcode_table[opv][0]
+        s = "%06X: " % addr
+        s += ns
+        s += dump_hex_str(instr)
+        return s, instr
+
+
     def str_to_bytes(self, s):
         outb = b''
         for i in range(0, len(s), 2):
@@ -717,9 +759,10 @@ class CPU_Pipe:
         
         
 def dump_hex(sa_24, data):
+    # Note: if sa_24 = -1 then don't print leading address
     count = 0
     for b in data:
-        if (count == 0):
+        if (count == 0) and sa_24 != -1:
             s = "\n%06X:" % sa_24
             print(s, end="")
         s = " %02X" % b
@@ -728,8 +771,23 @@ def dump_hex(sa_24, data):
         sa_24 += 1
         if count > 15:
             count = 0
+    print("\n")
     return
 
+def dump_hex_str(data):
+    count = 0
+    s = ""
+    for b in data:
+        s += " %02X" % b
+        count += 1
+        if count > 15:
+            count = 0
+            s += "\n"
+    s += "\n"
+    return s
+
+
+        
 def test_page_read_write(address):
     # Create a page of test data to write: Fill up a page with FF FE FD FC ... 01 00
     outb = b''
@@ -757,9 +815,20 @@ def test_go(address):
 if __name__ == "__main__":
     print(len(opcode_table))
     pipe = CPU_Pipe(SER_PORT, 921600)
-    srec_fn = "rammon.s19"
+    srec_fn = "allops_m1x1.s19"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
+    done = False
+    addr = 0x2000
+    while not done:
+        s, res = pipe.print_instruction_at(addr)
+        print(s)
+        nexti = int.from_bytes(res[0:1], 'little')
+        if nexti == 0:
+            done = True
+        addr += len(res)
+    
+    exit(0)
     bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
     print("\nJumping to program")
     res = pipe.jump_long(0x002000)
