@@ -1,3 +1,4 @@
+COP
 ; Assembled with 64TASS
 ; 	64tass -c ~.asm -L ~.lst --intel-hex -o ~.hex
 ; or
@@ -8,13 +9,14 @@
 
 		.INCLUDE "cpu_symbols.inc"
 
+
 * 	= 	$2000
 START 	
         ; Native mode instructions
         .al
         .xl
 		ORA ($30,X)     ;$01
-        COP #10
+        ;;; === COP #10
         ORA 1,S
         TSB $30
         ORA $42

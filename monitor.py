@@ -472,8 +472,8 @@ class CPU_Pipe:
         self.bp_list = list()
         self.fifo.read()     # Ditch any power on messages or noise bursts
         self.e_flag = False   # Assume something.  Correct it upon first status read
-        self.m_flag = True
-        self.x_flag = True
+        self.m_flag = False
+        self.x_flag = False
 
     def cmd_dialog(self, cmd):
         outf = self.v.wire_encode(cmd)
@@ -818,7 +818,7 @@ def test_go(address):
 if __name__ == "__main__":
     print(len(opcode_table))
     pipe = CPU_Pipe(SER_PORT, 921600)
-    srec_fn = "allops_m1x1.s19"
+    srec_fn = "allops_m0x0.s19"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
     done = False
