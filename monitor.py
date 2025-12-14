@@ -36,7 +36,7 @@ opcode_table = (
 
 # 08
 ("PHP", IMM,  1,1,1,1,1,1),  # PHP             ;$08
-("ORA", IMM,  3,3,2,3,3,3),  # ORA #$42        ;$09
+("ORA", IMM,  3,3,2,2,2,2),  # ORA #$42        ;$09
 ("ASL", IMM,  1,1,1,1,1,1),  # ASL A           ;$0A
 ("PHD", IMM,  1,1,1,1,0,0),  # PHD             ;$0B
 ("TSB", IMM,  3,3,3,3,3,0),  # TSB $0300       ;$0C
@@ -72,7 +72,7 @@ opcode_table = (
 ("AND", IMM,  2,2,2,2,0,0),  # AND [$10]       ;27
 # 28
 ("PLP", IMM,  1,1,1,1,1,1),  # PLP             ;$28
-("AND", IMM,  3,3,2,3,3,3),  # AND #$FE        ;$29
+("AND", IMM,  3,3,2,2,2,2),  # AND #$FE        ;$29
 ("ROL", IMM,  1,1,1,1,1,1),  # ROL A           ;2A
 ("PLD", IMM,  1,1,1,1,0,0),  # PLD             ;2B
 ("BIT", IMM,  3,3,3,3,3,3),  # BIT $0BCD       ;2C
@@ -108,7 +108,7 @@ opcode_table = (
 ("EOR", IMM,  2,2,2,2,0,0),  # EOR [$27]       ;47
 # 48
 ("PHA", IMM,  1,1,1,1,1,1),  # PHA             ;$48
-("EOR", IMM,  3,3,2,3,3,3),  # EOR #$FF        ;49
+("EOR", IMM,  3,3,2,2,2,2),  # EOR #$FF        ;49
 ("LSR", IMM,  1,1,1,1,1,1),  # LSR A           ;4A
 ("PHK", IMM,  1,1,1,1,0,0),  # PHK             ;4B
 ("JMP", IMM,  3,3,3,3,3,3),  # JMP $2A04       ;4C
@@ -144,7 +144,7 @@ opcode_table = (
 ("ADC", IMM,  2,2,2,2,0,0),  # ADC [$89]       ;67
 # 68
 ("PLA", IMM,  1,1,1,1,1,1),  # PLA             ;$68
-("ADC", IMM,  3,3,2,3,3,3),  # ADC #$23        ;69
+("ADC", IMM,  3,3,2,2,2,2),  # ADC #$23        ;69
 ("ROR", IMM,  1,1,1,1,1,1),  # ROR A           ;6A
 ("RTL", IMM,  1,1,1,1,0,0),  # RTL             ;6B
 ("JMP", IMM,  3,3,3,3,3,3),  # JMP ($FFFC)     ;6C
@@ -180,7 +180,7 @@ opcode_table = (
 ("STA", IMM,  2,2,2,2,0,0),  # STA [$55]       ;87
 # 88
 ("DEY", IMM,  1,1,1,1,1,1),  # DEY             ;88
-("BIT", IMM,  3,3,2,3,3,0),  # BIT #$31        ;89
+("BIT", IMM,  3,3,2,2,2,0),  # BIT #$31        ;89
 ("TXA", IMM,  1,1,1,1,1,1),  # TXA             ;8A
 ("PHB", IMM,  1,1,1,1,0,0),  # PHB             ;8B
 ("STY", IMM,  3,3,3,3,3,3),  # STY $5150       ;8C
@@ -208,7 +208,7 @@ opcode_table = (
 # A0
 ("LDY", IMM,  3,2,3,2,2,2),  # LDY #$44        ;$A0
 ("LDA", IMM,  2,2,2,2,2,2),  # LDA ($27,X)     ;A1
-("LDX", IMM,  3,2,3,2,3,3),  # LDX #$24        ;A2
+("LDX", IMM,  3,2,3,2,2,2),  # LDX #$24        ;A2
 ("LDA", IMM,  2,2,2,2,0,0),  # LDA 5,S         ;A3
 ("LDY", IMM,  2,2,2,2,2,2),  # LDY $55         ;A4
 ("LDA", IMM,  2,2,2,2,2,2),  # LDA $68         ;A5
@@ -217,7 +217,7 @@ opcode_table = (
 
 # A8
 ("TAY", IMM,  1,1,1,1,1,1),  # TAY             ;$A8
-("LDA", IMM,  3,3,2,3,3,3),  # LDA #$AB        ;$A9
+("LDA", IMM,  3,3,2,2,2,2),  # LDA #$AB        ;$A9
 ("TAX", IMM,  1,1,1,1,1,1),  # TAX             ;AA
 ("PLB", IMM,  1,1,1,1,0,0),  # PLB             ;AB
 ("LDY", IMM,  3,3,3,3,3,3),  # LDY $1234       ;AC
@@ -244,7 +244,7 @@ opcode_table = (
 ("LDX", IMM,  3,3,3,3,3,3),  # LDX $2012,Y     ;BE
 ("LDA", IMM,  4,4,4,4,0,0),  # LDA $123456,X   ;BF
 # C0
-("CPY", IMM,  3,2,3,2,3,3),  # CPY #$42        ;$C0
+("CPY", IMM,  3,2,3,2,2,2),  # CPY #$42        ;$C0
 ("CMP", IMM,  2,2,2,2,2,2),  # CMP ($50,X)     ;C1
 ("REP", IMM,  2,2,2,2,0,0),  # REP #$30        ;C2
 ("CMP", IMM,  2,2,2,2,0,0),  # CMP 1,S         ;C3
@@ -254,7 +254,7 @@ opcode_table = (
 ("CMP", IMM,  2,2,2,2,0,0),  # CMP [$42]       ;C7
 # C8
 ("INY", IMM,  1,1,1,1,1,1),  # INY             ; $C8
-("CMP", IMM,  3,3,2,3,3,3),  # CMP #$51        ;C9
+("CMP", IMM,  3,3,2,2,2,2),  # CMP #$51        ;C9
 ("DEX", IMM,  1,1,1,1,1,1),  # DEX             ;CA
 ("WAI", IMM,  1,1,1,1,1,0),  # WAI             ;CB
 ("CPY", IMM,  3,3,3,3,3,3),  # CPY $4242       ;CC
@@ -280,7 +280,7 @@ opcode_table = (
 ("DEC", IMM,  3,3,3,3,3,3),  # DEC $5150,X     ;DE
 ("CMP", IMM,  4,4,4,4,0,0),  # CMP $123456,X   ;DF
 # E0
-("CPX", IMM,  3,2,3,2,3,3),  # CPX #$FF        ;$E0
+("CPX", IMM,  3,2,3,2,2,2),  # CPX #$FF        ;$E0
 ("SBC", IMM,  2,2,2,2,2,2),  # SBC ($01,X)     ;E1
 ("SEP", IMM,  2,2,2,2,0,0),  # SEP #$00        ;E2
 ("SBC", IMM,  2,2,2,2,0,0),  # SBC 1,S         ;E3
@@ -290,7 +290,7 @@ opcode_table = (
 ("SBC", IMM,  2,2,2,2,0,0),  # SBC [$42]       ;E7
 # E8
 ("INX", IMM,  1,1,1,1,1,1),  # INX             ;$E8
-("SBC", IMM,  3,3,2,3,3,3),  # SBC #$12        ;E9
+("SBC", IMM,  3,3,2,2,2,2),  # SBC #$12        ;E9
 ("NOP", IMM,  1,1,1,1,1,1),  # NOP             ;EA
 ("XBA", IMM,  1,1,1,1,0,0),  # XBA             ;EB
 ("INC", IMM,  3,3,3,3,3,3),  # CPX $3124       ;EC
