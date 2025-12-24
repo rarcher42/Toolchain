@@ -61,7 +61,7 @@ SIZE_CMD_BUF	= 	768			; maximum command length - pathological worst case for 256
 CMD_BUF		
 		.fill	SIZE_CMD_BUF
 
-* 		= $7E00
+ * 		= $7E00
 ; Mirror the user state upon BRK exit state
 ; Note: do not re-order the next 16 bytes
 M_EMODE	
@@ -534,47 +534,91 @@ PUTSY1
 ; and return to monitor with machine context.
 ; Also, remember M and X flag settings and native mode 
 NAT_SAV_CONTEXT
-		SEP	#M_FLAG			; 
-		.as
-		STA	M_A
-		XBA
-		STA	M_B
-		PLA
-		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
-		AND #$30			; Figure which E mode
-		LSR	A
-		LSR	A
-		LSR	A
-		LSR	A
-		STA	M_EMODE			; Remember the flag combinations		
-BNICP1
-		REP	#X_FLAG			; 16 bit index, binary mode
-		.xl
-		STX	M_X
-		STY	M_Y
-		PLX					; Pull PC15..0 return address off stack
-		DEX					; points past BRK... restore to point to BRK for continue
-		DEX					; " Now we're pointing at BRK.  Handler should restore the byte here
-		STX	M_PC			; save PC=*(BRK instruction)
-		; End restore instruction byte
-		PLA					; Get PBR of code
-		STA	M_PBR
-		TSX					; Now we're pulled everything off stack - it's pre-BRK position
-		STX	M_SP
-		PHD					; save DPR (zero page pointer)
-		PLX					
-		STX	M_DPR
-		PHB					; Save 
-		PLA
-		STA	M_DBR
-		; Fake up the stack to return to system monitor
+        REP #X_FLAG | M_FLAG    ; No data loss if any were 8 bits before
+        .xl
+        .al
+        ; Handle all 16 bit quantities first
+        STA M_A                 ; Note:  if bytes, A must directly precede B in memory
+        STX M_X
+        STY M_Y
+        TDC
+        STA M_DPR
+        TSC
+        CLC
+        ADC #5                  ; Calculate where stack was pointing prior to BRK
+        STA M_SP
+        LDA 2,S
+        SEC                     ; calculate PC where BRK instruction was inserted
+        SBC #2                  ;       "
+        STA M_PC               
+        SEP #M_FLAG
+        .as                     ; Now handle the 8 bit quantitites
+        PLA                     ; Get flags
+        STA M_FLAGS
+        AND #$30                ; Extract M and X flags
+        LSR A
+        LSR A
+        LSR A
+        LSR A 
+        STA M_EMODE             ; Remember the mode (convenience for interpresting results for register dump)
+        PLA                     ; discard return address
+        PLA
+        PLA                     ; Get PBR
+        STA M_PBR               
+        PHB
+        PLA
+        STA M_DBR
 BNRET		
 		LDA	#0				; Monitor is in bank #0
 		PHA					; push PBR=0
 		LDX	#START
 		PHX					; push "return address"
-		PHP					; save flags
+		PHP					; save arbitrary flags (don't matter)
 		RTI					; Jump to monitor entry
+        
+; old start
+;		SEP	#M_FLAG			; 
+;		.as
+;		STA	M_A
+;		XBA
+;		STA	M_B
+;		PLA
+;		STA	M_FLAGS			; Pull flags put on stack by BRK instruction
+;		AND #$30			; Figure which E mode
+;		LSR	A
+;		LSR	A
+;		LSR	A
+;		LSR	A
+;		STA	M_EMODE			; Remember the flag combinations		
+;BNICP1
+;		REP	#X_FLAG			; 16 bit index, binary mode
+;		.xl
+;		STX	M_X
+;		STY	M_Y
+;		PLX					; Pull PC15..0 return address off stack
+;		DEX					; points past BRK... restore to point to BRK for continue
+;		DEX					; " Now we're pointing at BRK.  Handler should restore the byte here
+;		STX	M_PC			; save PC=*(BRK instruction)
+;		; End restore instruction byte
+;		PLA					; Get PBR of code
+;		STA	M_PBR
+;		TSX					; Now we're pulled everything off stack - it's pre-BRK position
+;		STX	M_SP
+;		PHD					; save DPR (zero page pointer)
+;		PLX					
+;		STX	M_DPR
+;		PHB					; Save 
+;		PLA
+;		STA	M_DBR
+;		; Fake up the stack to return to system monitor
+;BNRET		
+;		LDA	#0				; Monitor is in bank #0
+;		PHA					; push PBR=0
+;		LDX	#START
+;		PHX					; push "return address"
+;		PHP					; save flags
+;		RTI					; Jump to monitor entry
+; old end
 
 NMI_ISR 	
 		RTI
