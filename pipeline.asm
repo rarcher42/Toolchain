@@ -401,11 +401,12 @@ ICGN1   LDA CMD_BUF+1,X
         INX
         CPX #16
         BNE ICGN1
+        JSR SEND_ACK
         RTS
 
 ; RES_CONTEXT [07]
 ; From (hopefully) previously-saved context from prior BRK, reload registers and context.
-; Always enters in native mode and will only work from native mode, but may exit in emulation mode.
+; Always enters in native mode and will only work from native mode, but may exit to emulation mode.
 ; Note: this "returns" (exits!) to user context and only returns to monitor via a future BRK in user program context
 RES_CONTEXT
 ; Set context Native mode

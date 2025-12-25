@@ -531,7 +531,10 @@ class CPU_Pipe:
         cmd = b'\x05'
         return self.cmd_dialog(cmd)
         
-        
+    def init_registers(self, regdata):
+        cmd = b'\x06'+regdata
+        return self.cmd_dialog(cmd)
+
     def decode_flags(self, f, emode):
         s = "FLAGS(%02X)=" % f
         if f & 0x80:
@@ -818,7 +821,11 @@ def test_go(address):
 if __name__ == "__main__":
     print(len(opcode_table))
     pipe = CPU_Pipe(SER_PORT, 921600)
-
+    ir = b'\x02\xA4\x34\x12\x78\x56\xBC\x9A\xFF\x7C\x02\x65\x04\x2A\x00\x00'
+    pipe.init_registers(ir)
+    print(pipe.get_registers())
+    pipe.print_registers()
+    exit(0)
     srec_fn = "m0x0.s19"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
