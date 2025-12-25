@@ -1,5 +1,5 @@
-64tass -c rammon.asm -L rammon.lst --s-record -o rammon.s19
-64tass -c rammon.asm -L rammon.lst --intel-hex -o rammon.hex
+64tass -c dow.asm -L dow.lst --s-record -o dow.s19
+64tass -c dow.asm -L dow.lst --intel-hex -o dow.hex
 
 
 

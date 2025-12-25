@@ -25,7 +25,8 @@ START
         ORA $4242       ;$0D
         ASL $5150       ;$0E
         ;ORA $123124     ;$0F
-HERE    BPL HERE        ;$10
+        BPL HERE        ;$10
+HERE      
         ORA ($42),y     ;$11
         ORA ($42)       ;$12
         ;ORA (1,S),Y     ;$13
@@ -58,7 +59,7 @@ HERE    BPL HERE        ;$10
         ROL $5150       ;2E
         ;AND $123456     ;2F
         BMI HERE        ;$30
-        AND ($20),Y     ;31
+HERE    AND ($20),Y     ;31
         AND ($20)       ;32
         ;AND (1,S),Y     ;33
         BIT $20,X       ;34
@@ -89,9 +90,8 @@ HERE    BPL HERE        ;$10
         EOR $ABCD       ;4D
         LSR $2525       ;4E
         ;EOR $123456     ;4F
-THERE
         BVC THERE       ; $50 
-        
+THERE        
         EOR ($21),Y     ;51 
         EOR ($25)       ;52
         ;EOR (1,S),Y     ;53
@@ -139,8 +139,8 @@ THERE
         ADC $1234,X     ;7D
         ROR $3456,X     ;7E
         ;ADC $123456,X   ;7F
-T01
-        BRA T01         ;$80    
+        BRA T01         ;$80
+T01    
         STA ($00,X)     ;81
         ;BRL T01         ;82
         ;STA 1,S         ;83

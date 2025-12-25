@@ -711,7 +711,7 @@ class CPU_Pipe:
                 datastr = li[8:-2]
                 #print(len(datastr), datastr)
                 barry = self.str_to_bytes(datastr)
-                dump_hex(addr, barry)
+                #dump_hex(addr, barry)
                 self.write_mem(addr, barry)
             elif rectype == 'S2':
                 ads = li[4:10]
@@ -723,7 +723,7 @@ class CPU_Pipe:
                 datastr = li[10:-2]
                 # print(len(datastr), datastr)
                 barry = self.str_to_bytes(datastr)
-                dump_hex(addr, barry)
+                #dump_hex(addr, barry)
                 self.write_mem(addr, barry)
             elif rectype == 'S3':
                 ads = li[4:12]
@@ -736,7 +736,7 @@ class CPU_Pipe:
                 datastr = li[12:-2]
                 #print(len(datastr), datastr)
                 barry = self.str_to_bytes(datastr)
-                dump_hex(addr, barry)
+                #dump_hex(addr, barry)
                 self.write_mem(addr, barry)
             elif rectype == 'S5':
                 pass
@@ -818,9 +818,53 @@ def test_go(address):
 if __name__ == "__main__":
     print(len(opcode_table))
     pipe = CPU_Pipe(SER_PORT, 921600)
-    srec_fn = "allops_m0x0.s19"
+
+    srec_fn = "m0x0.s19"
     print("Loading %s" % srec_fn)
     pipe.send_srec(srec_fn)
+    #bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
+    print("\nJumping to program")
+    res = pipe.jump_long(0x002000)
+    pipe.print_registers()
+    #pipe.replace_breaks()
+
+    srec_fn = "m0x1.s19"
+    print("Loading %s" % srec_fn)
+    pipe.send_srec(srec_fn)
+    #bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
+    print("Jumping to program")
+    res = pipe.jump_long(0x002000)
+    pipe.print_registers()
+    #pipe.replace_breaks()
+
+    srec_fn = "m1x0.s19"
+    print("Loading %s" % srec_fn)
+    pipe.send_srec(srec_fn)
+    #bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
+    print("\nJumping to program")
+    res = pipe.jump_long(0x002000)
+    pipe.print_registers()
+    #pipe.replace_breaks()
+
+    srec_fn = "m1x1.s19"
+    print("Loading %s" % srec_fn)
+    pipe.send_srec(srec_fn)
+    #bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
+    print("\nJumping to program")
+    res = pipe.jump_long(0x002000)
+    pipe.print_registers()
+    #pipe.replace_breaks()
+
+    srec_fn = "dow.s19"
+    print("Loading %s" % srec_fn)
+    pipe.send_srec(srec_fn)
+    #bp_replaced_val = pipe.set_breakpoint(0x2012)   # Set a breakpoint
+    print("\nJumping to program")
+    res = pipe.jump_long(0x002000)
+    pipe.print_registers()
+    #pipe.replace_breaks()
+
+    exit(0)
     done = False
     addr = 0x2000
     while not done:
