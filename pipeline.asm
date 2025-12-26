@@ -112,24 +112,12 @@ START
         PHA     
         PLB                     ; Make sure data bank is 0
 		JSR	INIT_FIFO			; initialize FIFO
-		LDY	#VER_MSG
-		JSR	PUTSY
 CMD_INIT 	
 		JSR	INIT_CMD_PROC			; Prepare processor state machine
 CMD_LOOP
 		JSR	CMD_PROC			; Run processor state machine
 		BRA	CMD_LOOP			; then do it some more
-
-VER_MSG
-		.text	CR,LF
-		.text  	"************************",CR,LF
-		.text	"*     BinMon v0.1      *",CR,LF
-		.text	"*     Ross Archer      *",CR,LF
-		.text	"*   MIT License Use    *",CR,LF
-		.text	"*   27 November 2025   *",CR,LF
-		.text	"************************",CR,LF
-		.text	0
-; END main monitor program
+; END main monitor loop
 
 		
 CMD_TBL 	
@@ -255,35 +243,35 @@ CMD_STATE_PROCESS
 		LDA	CMD_BUF				; Get the command
 		CMP	#1
 		BNE	PCBC1
-		JMP	RD_CMD
+		BRA	RD_CMD
 PCBC1		
 		CMP	#2
 		BNE	PCBC2
-		JMP	WR_CMD
+		BRA	WR_CMD
 PCBC2	
 		CMP	#3
 		BNE	PCBC3
-		JMP	GO_CMD
+		BRL	GO_CMD
 PCBC3	
 		CMP	#4					; set (volatile) Breakpoint
 		BNE	PCBC4
-		JMP	SET_BP_CMD			; Breakpoint command	
+		BRL	SET_BP_CMD			; Breakpoint command	
 PCBC4	
 		CMP	#5					; Get context
 		BNE	PCBC5
-		JMP	GET_CONTEXT
+		BRL	GET_CONTEXT
 PCBC5
         CMP #6                  ; Restore context
         BNE PCBC6
-        JMP INIT_CONTEXT         ; Set context according to PC message (initialize context)
+        BRL INIT_CONTEXT         ; Set context according to PC message (initialize context)
 PCBC6   
         CMP #7
         BNE PCBC7
-        JMP RES_CONTEXT         ; restore context
+        BRL RES_CONTEXT         ; restore context
 PCBC7	
 		CMP	#'E'				; echo command
 		BNE	PCBERR
-		JMP	ECHO_CMD
+		BRL	ECHO_CMD
 PCBERR	
 		JSR	SEND_NAK			; Unknown cmd
 		RTS
@@ -410,6 +398,7 @@ ICGN1   LDA CMD_BUF+1,X
 ; Note: this "returns" (exits!) to user context and only returns to monitor via a future BRK in user program context
 RES_CONTEXT
 ; Set context Native mode
+        JSR SEND_ACK
         CLC
         XCE             ; Should be redundant - monitor is always in native mode
         REP #(X_FLAG | M_FLAG)
@@ -736,6 +725,17 @@ IRQ_EMU_ISR
 		.as
 		RTI
 		
+;VER_MSG
+;		.text	CR,LF
+;		.text  	"************************",CR,LF
+;		.text	"*     BinMon v0.1      *",CR,LF
+;		.text	"*     Ross Archer      *",CR,LF
+;		.text	"*   MIT License Use    *",CR,LF
+;		.text	"*   27 November 2025   *",CR,LF
+;		.text	"************************",CR,LF
+;		.text	0
+; END main monitor loop
+
 
 ;;; Exception / Reset / Interrupt vectors in native and emulation mode
 * 	= 	$FFE4

@@ -16,7 +16,7 @@ START
         .al
         .xl
 		ORA ($30,X)     ;$01
-        ;;; === COP #10
+        COP #10
         ORA 1,S
         TSB $30
         ORA $42

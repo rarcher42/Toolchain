@@ -15,7 +15,7 @@ START
         .xs
 		ORA ($30,X)     ;$01
         COP #10
-        ;---- ORA 1,S
+        ORA 1,S
         TSB $30
         ORA $42
         ASL $22
