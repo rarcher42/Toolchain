@@ -22,6 +22,7 @@ import serial
 
 SER_PORT="COM4"
 
+# Addressing modes 
 OP_NONE = 0
 OP_A = 1 
 OP_IMM = 2
@@ -41,9 +42,10 @@ OP_ZP_XI = 15
 OP_ZP_IY = 16
 OP_ZP_IY_L = 17 # ZILY
 OP_REL = 18
-OP_SR = 19
-OP_SR_IY = 20 # "SIY"
-OP_2OPS = 21  # "TWO"
+OP_REL_L = 19
+OP_SR = 20
+OP_SR_IY = 21 # "SIY"
+OP_2OPS = 22  # "TWO"
     
 
 opcode_table = (
@@ -195,7 +197,7 @@ opcode_table = (
 # 80
 ("BRA",     (2,2,2,2,2,0), (OP_REL)),           # BRA T01          ;$80
 ("STA",     (2,2,2,2,2,2), (OP_ZP_XI)),         # STA ($00,X)      ;81
-("BRL",     (3,3,3,3,0,0), (OP_REL)),           # BRL T01          ;82
+("BRL",     (3,3,3,3,0,0), (OP_REL_L)),         # BRL T01          ;82
 ("STA",     (2,2,2,2,0,0), (OP_SR)),            # STA 1,S          ;83
 ("STY",     (2,2,2,2,2,2), (OP_ZP)),            # STY $21          ;84
 ("STA",     (2,2,2,2,2,2), (OP_ZP)),            # STA $64          ;85
@@ -505,17 +507,15 @@ class Disasm:
         elif op_admode == OP_ZP:
             ost += " $%02X " % val
         elif op_admode == OP_REL:
-            if self.ir_len == 3:
-                if (val > 0x7FFF):
-                    val = 0x10000 - val
+            if (val > 0x7F):
+                val = 0x100 - val
+            val = self.pc + 2 - val
+            ost += " $%04X " % val
+        elif op_admode == OP_REL_L:
+            if (val > 0x7FFF):
+                val = 0x10000 - val
                 val = self.pc + 3 - val
                 ost += " $%04X " % val
-            elif self.ir_len == 2:
-                if (val > 0x7F):
-                    val = 0x100 - val
-                val = self.pc + 2 - val
-                ost += " $%04X " % val
-
         elif op_admode == OP_ZP_XI:
             ost += " ($%02X,X) " % val
     
