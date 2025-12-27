@@ -62,6 +62,8 @@ OP_2OPS = 23  # "TWO"
 #//     ilen += 1
 #// elif (entry & 0x40) and X_FLAG == 0:
 #//     ilen += 1
+
+'''
 op_decode = [
 0x01, 0x02, 0x32, 0x32, 0x12, 0x02, 0x02, 0x32,     # $00-$07
 0x01, 0x82, 0x01, 0x31, 0x13, 0x03, 0x03, 0x34,     # $08-$0F
@@ -96,329 +98,347 @@ op_decode = [
 0x02, 0x02, 0x12, 0x32, 0x33, 0x02, 0x02, 0x32,     # $F0-$F7
 0x01, 0x03, 0x11, 0x31, 0x33, 0x03, 0x03, 0x34      # $F8-$FF
 ]
+'''
+
 
 opcode_table = (
-# {"MNEMONIC", (M0X0-bytes, M0X1 bytes, M1X0 byres, M1X1 bytes, 65c02 bytes, 6502 bytes}, (ADDRMODE)
+# {"MNEMONIC", ADDRMODE, ENCODING)
+# ENCODING FIELD:
+#// Each entry corresponds to an opcode value $00-$FF
+#// Bits 2-0 hold the instruction length 1-4
+#// If Bit 7 is set, then if M=0 then add one to instruction length in b2..b0
+#// If Bit 6 is set, then if X=0 then add one to instruction length in b2..b0
+#// If Bit 5 is set, then this instruction is NOT supported on a real 65c02
+#// If Bit 4 is set, then this instruction is NOT supported on a real NMOS 6502
+#// THUS:
+#// entry = op_decode[op]
+#// ilen = entry & 0x7F
+#// if (entry & 0x80) and M_FLAG == 0:
+#//     ilen += 1
+#// elif (entry & 0x40) and X_FLAG == 0:
+#//     ilen += 1
+
+
 # $00
 #0x01, 0x02, 0x32, 0x32, 0x12, 0x02, 0x02, 0x32,     # $00-$07
-("BRK",  OP_NONE),          # BRK               ;$00
-("ORA",  OP_ZP_XI),         # ORA ($30,X)       ;$01
-("COP",  OP_IMM),           # COP #10           ;$02
-("ORA",  OP_SR),            # ORA 1,S           ;$03 
-("TSB",  OP_ZP),            # TSB $30           ;$04  
-("ORA",  OP_ZP),            # ORA $42           ;$05
-("ASL",  OP_ZP),            # ASL $22           ;$06
-("ORA",  OP_ZP_IND_L),      # ORA [$33]         ;$07
+("BRK",  OP_NONE,       0x01),      # BRK               ;$00
+("ORA",  OP_ZP_XI,      0x02),      # ORA ($30,X)       ;$01
+("COP",  OP_IMM,        0x32),      # COP #10           ;$02
+("ORA",  OP_SR,         0x32),      # ORA 1,S           ;$03 
+("TSB",  OP_ZP,         0x12),      # TSB $30           ;$04  
+("ORA",  OP_ZP,         0x02),      # ORA $42           ;$05
+("ASL",  OP_ZP,         0x02),      # ASL $22           ;$06
+("ORA",  OP_ZP_IND_L,   0x32),      # ORA [$33]         ;$07
 # 08
 #0x01, 0x82, 0x01, 0x31, 0x13, 0x03, 0x03, 0x34,     # $08-$0F
-("PHP",  OP_NONE),          # PHP              ;$08
-("ORA",  OP_IMM),           # ORA #$42         ;$09
-("ASL",  OP_A),             # ASL A            ;$0A
-("PHD",  OP_NONE),          # PHD              ;$0B
-("TSB",  OP_ABS),           # TSB $0300        ;$0C
-("ORA",  OP_ABS),           # ORA $4242        ;$0D
-("ASL",  OP_ABS),           # ASL $5150        ;$0E
-("ORA",  OP_ABS_L),         # ORA $123124      ;$0F
+("PHP",  OP_NONE,       0x01),      # PHP              ;$08
+("ORA",  OP_IMM,        0x82),      # ORA #$42         ;$09
+("ASL",  OP_A,          0x01),      # ASL A            ;$0A
+("PHD",  OP_NONE,       0x31),      # PHD              ;$0B
+("TSB",  OP_ABS,        0x13),      # TSB $0300        ;$0C
+("ORA",  OP_ABS,        0x03),      # ORA $4242        ;$0D
+("ASL",  OP_ABS,        0x03),      # ASL $5150        ;$0E
+("ORA",  OP_ABS_L,      0x34),      # ORA $123124      ;$0F
 # 10
 #0x02, 0x02, 0x12, 0x32, 0x12, 0x02, 0x02, 0x32,     # $10-$17
-("BPL",  OP_REL),           # BPL HERE         ;$10
-("ORA",  OP_ZP_IY),         # ORA ($42),y      ;$11
-("ORA",  OP_ZP_IND),        # ORA ($42)        ;$12
-("ORA",  OP_SR_IY),         # ORA (1,S),Y      ;$13
-("TRB",  OP_ZP),            # TRB $19          ;$14
-("ORA",  OP_ZP_X),          # ORA $42,X        ;$15
-("ASL",  OP_ZP_X),          # ASL $43,X        ;$16
-("ORA",  OP_ZP_IY_L),       # ORA [$12],Y      ;$17
+("BPL",  OP_REL,        0x02),      # BPL HERE         ;$10
+("ORA",  OP_ZP_IY,      0x02),      # ORA ($42),y      ;$11
+("ORA",  OP_ZP_IND,     0x12),      # ORA ($42)        ;$12
+("ORA",  OP_SR_IY,      0x32),      # ORA (1,S),Y      ;$13
+("TRB",  OP_ZP,         0x12),      # TRB $19          ;$14
+("ORA",  OP_ZP_X,       0x02),      # ORA $42,X        ;$15
+("ASL",  OP_ZP_X,       0x02),      # ASL $43,X        ;$16
+("ORA",  OP_ZP_IY_L,    0x32),      # ORA [$12],Y      ;$17
 # 18
 #0x01, 0x03, 0x11, 0x31, 0x13, 0x03, 0x03, 0x34,     # $18-$1F
-("CLC",  OP_NONE),          # CLC              ;$18
-("ORA",  OP_ABS_Y),         # ORA $2A04,Y      ;$19
-("INC",  OP_A),             # INC A            ;$1A
-("TCS",  OP_NONE),          # TCS              ;1B
-("TRB",  OP_ABS),           # TRB $1234        ;1C
-("ORA",  OP_ABS_X),         # ORA $0300,X      ;1D
-("ASL",  OP_ABS_X),         # ASL $4242,X      ;1E
-("ORA",  OP_ABS_X_L),      #0x01, 0x82, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $28-$2F # ORA $402011,X    ;1F
+("CLC",  OP_NONE,       0x01),      # CLC              ;$18
+("ORA",  OP_ABS_Y,      0x03),      # ORA $2A04,Y      ;$19
+("INC",  OP_A,          0x11),      # INC A            ;$1A
+("TCS",  OP_NONE,       0x31),      # TCS              ;1B
+("TRB",  OP_ABS,        0x13),      # TRB $1234        ;1C
+("ORA",  OP_ABS_X,      0x03),      # ORA $0300,X      ;1D
+("ASL",  OP_ABS_X,      0x03),      # ASL $4242,X      ;1E
+("ORA",  OP_ABS_X_L,    0x34),      # ORA $402011,X    ;1F
 # 20
 #0x03, 0x02, 0x34, 0x32, 0x02, 0x02, 0x02, 0x32,     # $20-$27
-("JSR",  OP_ABS),           # JSR HERE         ;$20 
-("AND",  OP_ZP_XI),         # AND ($69,X)      ;21
-("JSL",  OP_ABS_L),           # JSL HERE         ;22
-("AND",  OP_SR),            # AND 1,S          ;23
-("BIT",  OP_ZP),            # BIT $20          ;24
-("AND",  OP_ZP),            # AND $30          ;25
-("ROL",  OP_ZP),            # ROL $12          ;26
-("AND",  OP_ZP_IND_L),      # AND [$10]        ;27
+("JSR",  OP_ABS,        0x03),      # JSR HERE         ;$20 
+("AND",  OP_ZP_XI,      0x02),      # AND ($69,X)      ;21
+("JSL",  OP_ABS_L,      0x34),      # JSL HERE         ;22
+("AND",  OP_SR,         0x32),      # AND 1,S          ;23
+("BIT",  OP_ZP,         0x02),      # BIT $20          ;24
+("AND",  OP_ZP,         0x02),      # AND $30          ;25
+("ROL",  OP_ZP,         0x02),      # ROL $12          ;26
+("AND",  OP_ZP_IND_L,   0x32),      # AND [$10]        ;27
 # 28
 #0x01, 0x82, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $28-$2F
-("PLP",  OP_NONE),          # PLP              ;$28
-("AND",  OP_IMM),           # AND #$FE         ;$29
-("ROL",  OP_A),             # ROL A            ;2A
-("PLD",  OP_NONE),          # PLD              ;2B
-("BIT",  OP_ABS),           # BIT $0BCD        ;2C
-("AND",  OP_ABS),           # AND $0DEF        ;2D
-("ROL",  OP_ABS),           # ROL $5150        ;2E
-("AND",  OP_ABS_L),         # AND $123456      ;2F
+("PLP",  OP_NONE,       0x01),      # PLP              ;$28
+("AND",  OP_IMM,        0x82),      # AND #$FE         ;$29
+("ROL",  OP_A,          0x01),      # ROL A            ;2A
+("PLD",  OP_NONE,       0x31),      # PLD              ;2B
+("BIT",  OP_ABS,        0x03),      # BIT $0BCD        ;2C
+("AND",  OP_ABS,        0x03),      # AND $0DEF        ;2D
+("ROL",  OP_ABS,        0x03),      # ROL $5150        ;2E
+("AND",  OP_ABS_L,      0x34),      # AND $123456      ;2F
 #30 
 #0x02, 0x02, 0x12, 0x32, 0x12, 0x02, 0x02, 0x32,     # $30-$37    
-("BMI",  OP_REL),           # BMI HERE         ;$30
-("AND",  OP_ZP_IY),         # AND ($20),Y      ;31
-("AND",  OP_ZP_IND),        # AND ($20)        ;32
-("AND",  OP_SR_IY),         # AND (1,S),Y      ;33
-("BIT",  OP_ZP_X),          # BIT $20,X        ;34
-("AND",  OP_ZP_X),          # AND $21,X        ;35
-("ROL",  OP_ZP_X),          # ROL $69,X        ;36
-("AND",  OP_ZP_IY_L),       # AND [$30],Y      ;37
+("BMI",  OP_REL,        0x02),      # BMI HERE         ;$30
+("AND",  OP_ZP_IY,      0x02),      # AND ($20),Y      ;31
+("AND",  OP_ZP_IND,     0x12),      # AND ($20)        ;32
+("AND",  OP_SR_IY,      0x32),      # AND (1,S),Y      ;33
+("BIT",  OP_ZP_X,       0x12),      # BIT $20,X        ;34
+("AND",  OP_ZP_X,       0x02),      # AND $21,X        ;35
+("ROL",  OP_ZP_X,       0x02),      # ROL $69,X        ;36
+("AND",  OP_ZP_IY_L,    0x32),      # AND [$30],Y      ;37
 # 38
 #0x01, 0x03, 0x11, 0x31, 0x13, 0x03, 0x03, 0x34,     # $38-$3F
-("SEC",  OP_NONE),          # SEC              ;$38
-("AND",  OP_ABS_Y),         # AND $2A04,Y      ;39
-("DEC",  OP_A),             # DEC A            ;3A
-("TSC",  OP_NONE),          # TSC              ;3B
-("BIT",  OP_ABS_X),         # BIT $ABCD,X      ;3C
-("AND",  OP_ABS_X),         # AND $1234,X      ;3D
-("ROL",  OP_ABS_X),         # ROL $5150,X      ;3E
-("AND",  OP_ABS_X_L),       # AND $123456,X    ;3F
+("SEC",  OP_NONE,       0x01),      # SEC              ;$38
+("AND",  OP_ABS_Y,      0x03),      # AND $2A04,Y      ;39
+("DEC",  OP_A,          0x11),      # DEC A            ;3A
+("TSC",  OP_NONE,       0x31),      # TSC              ;3B
+("BIT",  OP_ABS_X,      0x13),      # BIT $ABCD,X      ;3C
+("AND",  OP_ABS_X,      0x03),      # AND $1234,X      ;3D
+("ROL",  OP_ABS_X,      0x03),      # ROL $5150,X      ;3E
+("AND",  OP_ABS_X_L,    0x34),      # AND $123456,X    ;3F
 # 40
 #0x01, 0x32, 0x32, 0x32, 0x33, 0x02, 0x02, 0x32,     # $40-$47
-("RTI",  OP_NONE),          # RTI              ;$40
-("EOR",  OP_ZP_XI),         # EOR ($22,X)      ;41
-("WDM",  OP_IMM),           # WDM #$AA         ;42
-("EOR",  OP_SR),            # EOR 1,S          ;43
-("MVP",  OP_2OPS),          # MVP 1,2          ;44
-("EOR",  OP_ZP),            # EOR $12          ;45
-("LSR",  OP_ZP),            # LSR $33          ;46 
-("EOR",  OP_ZP_IND_L),      # EOR [$27]        ;47
+("RTI",  OP_NONE,       0x01),      # RTI              ;$40
+("EOR",  OP_ZP_XI,      0x32),      # EOR ($22,X)      ;41
+("WDM",  OP_IMM,        0x32),      # WDM #$AA         ;42
+("EOR",  OP_SR,         0x32),      # EOR 1,S          ;43
+("MVP",  OP_2OPS,       0x33),      # MVP 1,2          ;44
+("EOR",  OP_ZP,         0x02),      # EOR $12          ;45
+("LSR",  OP_ZP,         0x02),      # LSR $33          ;46 
+("EOR",  OP_ZP_IND_L,   0x32),      # EOR [$27]        ;47
 # 48
 #0x01, 0x82, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $48-$4F
-("PHA",  OP_NONE),          # PHA              ;$48
-("EOR",  OP_IMM),           # EOR #$FF         ;49
-("LSR",  OP_A),             # LSR A            ;4A
-("PHK",  OP_NONE),          # PHK              ;4B
-("JMP",  OP_ABS),           # JMP $2A04        ;4C
-("EOR",  OP_ABS),           # EOR $ABCD        ;4D
-("LSR",  OP_ABS),           # LSR $2525        ;4E
-("EOR",  OP_ABS_L),         # EOR $123456      ;4F
+("PHA",  OP_NONE,       0x01),      # PHA              ;$48
+("EOR",  OP_IMM,        0x82),      # EOR #$FF         ;49
+("LSR",  OP_A,          0x01),      # LSR A            ;4A
+("PHK",  OP_NONE,       0x31),      # PHK              ;4B
+("JMP",  OP_ABS,        0x03),      # JMP $2A04        ;4C
+("EOR",  OP_ABS,        0x03),      # EOR $ABCD        ;4D
+("LSR",  OP_ABS,        0x03),      # LSR $2525        ;4E
+("EOR",  OP_ABS_L,      0x34),      # EOR $123456      ;4F
 # 50
 #0x02, 0x02, 0x12, 0x32, 0x33, 0x02, 0x02, 0x32,     # $50-$57
-("BVC",  OP_REL),           # BVC THERE        ;$50
-("EOR",  OP_ZP_IY),         # EOR ($21),Y      ;51
-("EOR",  OP_ZP_IND),        # EOR ($25)        ;52
-("EOR",  OP_SR_IY),         # EOR (1,S),Y      ;53
-("MVN",  OP_2OPS),          # MVN 3,4          ;54
-("EOR",  OP_ZP_X),          # EOR $19,X        ;55
-("LSR",  OP_ZP_X),          # LSR $18,X        ;56
-("EOR",  OP_ZP_IY_L),       # EOR [$42],Y      ;57
+("BVC",  OP_REL,        0x02),      # BVC THERE        ;$50
+("EOR",  OP_ZP_IY,      0x02),      # EOR ($21),Y      ;51
+("EOR",  OP_ZP_IND,     0x12),      # EOR ($25)        ;52
+("EOR",  OP_SR_IY,      0x32),      # EOR (1,S),Y      ;53
+("MVN",  OP_2OPS,       0x33),      # MVN 3,4          ;54
+("EOR",  OP_ZP_X,       0x02),      # EOR $19,X        ;55
+("LSR",  OP_ZP_X,       0x02),      # LSR $18,X        ;56
+("EOR",  OP_ZP_IY_L,    0x32),      # EOR [$42],Y      ;57
 # 58
 #0x01, 0x03, 0x11, 0x31, 0x34, 0x03, 0x03, 0x34,     # $58-$5F
-("CLI",  OP_NONE),          # CLI              ;$58
-("EOR",  OP_ABS_Y),         # EOR $0200,Y      ;59
-("PHY",  OP_NONE),          # PHY              ;5A
-("TCD",  OP_NONE),          # TCD              ;5B
-("JML",  OP_ABS_L),         # JML $123456      ;5C
-("EOR",  OP_ABS_X),         # EOR $1234,X      ;5D
-("LSR",  OP_ABS_X),         # LSR $4231,X      ;5E
-("EOR",  OP_ABS_X_L),       # EOR $123456,X    ;5F
+("CLI",  OP_NONE,       0x01),      # CLI              ;$58
+("EOR",  OP_ABS_Y,      0x03),      # EOR $0200,Y      ;59
+("PHY",  OP_NONE,       0x11),      # PHY              ;5A
+("TCD",  OP_NONE,       0x31),      # TCD              ;5B
+("JML",  OP_ABS_L,      0x34),      # JML $123456      ;5C
+("EOR",  OP_ABS_X,      0x03),      # EOR $1234,X      ;5D
+("LSR",  OP_ABS_X,      0x03),      # LSR $4231,X      ;5E
+("EOR",  OP_ABS_X_L,    0x34),      # EOR $123456,X    ;5F
 # 60
 #0x01, 0x02, 0x33, 0x32, 0x12, 0x02, 0x02, 0x32,     # $60-$67
-("RTS",  OP_NONE),          # RTS              ;$60
-("ADC",  OP_ZP_XI),         # ADC ($50,X)      ;61
-("PER",  OP_REL),           # PER THERE        ;62
-("ADC",  OP_SR),            # ADC 1,S          ;63
-("STZ",  OP_ZP),            # STZ $30          ;64
-("AD#0x01, 0x03, 0x11, 0x31, 0x13, 0x03, 0x03, 0x34,     # $78-$7FC",  OP_ZP),            # ADC $30          ;65
-("ROR",  OP_ZP),            # ROR $59          ;66
-("ADC",  OP_ZP_IND_L),      # ADC [$89]        ;67
+("RTS",  OP_NONE,       0x01),      # RTS              ;$60
+("ADC",  OP_ZP_XI,      0x02),      # ADC ($50,X)      ;61
+("PER",  OP_REL,        0x33),      # PER THERE        ;62
+("ADC",  OP_SR,         0x32),      # ADC 1,S          ;63
+("STZ",  OP_ZP,         0x12),      # STZ $30          ;64
+("ADC",  OP_ZP,         0x02),      # ADC $30          ;65
+("ROR",  OP_ZP,         0x02),      # ROR $59          ;66
+("ADC",  OP_ZP_IND_L,   0x32),      # ADC [$89]        ;67
 # 68
 #0x01, 0x82, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $68-$6F
-("PLA",  OP_NONE),          # PLA              ;$68
-("ADC",  OP_IMM),           # ADC #$23         ;69
-("ROR",  OP_A),             # ROR A            ;6A
-("RTL",  OP_NONE),          # RTL              ;6B
-("JMP",  OP_ABS_IND),       # JMP ($FFFC)      ;6C
-("ADC",  OP_ABS),           # ADC $1234        ;6D
-("ROR",  OP_ABS),           # ROR $2345        ;6E
-("ADC",  OP_ABS_L),         # ADC $123456      ;6F
+("PLA",  OP_NONE,       0x01),      # PLA              ;$68
+("ADC",  OP_IMM,        0x82),      # ADC #$23         ;69
+("ROR",  OP_A,          0x01),      # ROR A            ;6A
+("RTL",  OP_NONE,       0x31),      # RTL              ;6B
+("JMP",  OP_ABS_IND,    0x03),      # JMP ($FFFC)      ;6C
+("ADC",  OP_ABS,        0x03),      # ADC $1234        ;6D
+("ROR",  OP_ABS,        0x03),      # ROR $2345        ;6E
+("ADC",  OP_ABS_L,      0x34),      # ADC $123456      ;6F
 # 70
 #0x02, 0x02, 0x02, 0x32, 0x12, 0x02, 0x02, 0x32,     # $70-$77
-("BVS",  OP_REL),           # BVS THERE        ;$70
-("ADC",  OP_ZP_IY),         # ADC ($21),Y      ;71
-("ADC",  OP_ZP_IND),        # ADC ($21)        ;72
-("ADC",  OP_SR_IY),         # ADC (1,S),Y      ;73
-("STZ",  OP_ZP_X),          # STZ $12,X        ;74
-("ADC",  OP_ZP_X),          # ADC $11,X        ;75
-("ROR",  OP_ZP_X),          # ROR $55,X        ;76
-("ADC",  OP_ZP_IY_L),       # ADC [$42],Y      ;77
+("BVS",  OP_REL,        0x02),      # BVS THERE        ;$70
+("ADC",  OP_ZP_IY,      0x02),      # ADC ($21),Y      ;71
+("ADC",  OP_ZP_IND,     0x02),      # ADC ($21)        ;72
+("ADC",  OP_SR_IY,      0x32),      # ADC (1,S),Y      ;73
+("STZ",  OP_ZP_X,       0x12),      # STZ $12,X        ;74
+("ADC",  OP_ZP_X,       0x02),      # ADC $11,X        ;75
+("ROR",  OP_ZP_X,       0x02),      # ROR $55,X        ;76
+("ADC",  OP_ZP_IY_L,    0x32),      # ADC [$42],Y      ;77
 # 78
 #0x01, 0x03, 0x11, 0x31, 0x13, 0x03, 0x03, 0x34,     # $78-$7F
-("SEI",  OP_NONE),          # SEI              ;78
-("ADC",  OP_ABS_Y),         # ADC $0100,Y      ;79
-("PLY",  OP_NONE),          # PLY              ;7A
-("TDC",  OP_NONE),          # TDC              ;7B
-("JMP",  OP_ABS_X_IND),     # JMP ($8080,X)    ;7C
-("ADC",  OP_ABS_X),         # ADC $1234,X      ;7D
-("ROR",  OP_ABS_X),         # ROR $3456,X      ;7E
-("ADC",  OP_ABS_X_L),       # ADC $123456,X    ;7F
+("SEI",  OP_NONE,       0x01),      # SEI              ;78
+("ADC",  OP_ABS_Y,      0x03),      # ADC $0100,Y      ;79
+("PLY",  OP_NONE,       0x11),      # PLY              ;7A
+("TDC",  OP_NONE,       0x31),      # TDC              ;7B
+("JMP",  OP_ABS_X_IND,  0x13),      # JMP ($8080,X)    ;7C
+("ADC",  OP_ABS_X,      0x03),      # ADC $1234,X      ;7D
+("ROR",  OP_ABS_X,      0x03),      # ROR $3456,X      ;7E
+("ADC",  OP_ABS_X_L,    0x34),      # ADC $123456,X    ;7F
 # 80
 #0x12, 0x02, 0x33, 0x32, 0x02, 0x02, 0x02, 0x32,     # $80-$87
-("BRA",  OP_REL),           # BRA T01          ;$80
-("STA",  OP_ZP_XI),         # STA ($00,X)      ;81
-("BRL",  OP_REL_L),         # BRL T01          ;82
-("STA",  OP_SR),            # STA 1,S          ;83
-("STY",  OP_ZP),            # STY $21          ;84
-("STA",  OP_ZP),            # STA $64          ;85
-("STX",  OP_ZP),            # STX $99          ;86
-("STA",  OP_ZP_IND_L),      # STA [$55]        ;87
+("BRA",  OP_REL,        0x12),      # BRA T01          ;$80
+("STA",  OP_ZP_XI,      0x02),      # STA ($00,X)      ;81
+("BRL",  OP_REL_L,      0x33),      # BRL T01          ;82
+("STA",  OP_SR,         0x32),      # STA 1,S          ;83
+("STY",  OP_ZP,         0x02),      # STY $21          ;84
+("STA",  OP_ZP,         0x02),      # STA $64          ;85
+("STX",  OP_ZP,         0x02),      # STX $99          ;86
+("STA",  OP_ZP_IND_L,   0x32),      # STA [$55]        ;87
 # 88
 #0x01, 0x92, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $88-$8F
-("DEY",  OP_NONE),          # DEY              ;88
-("BIT",  OP_IMM),           # BIT #$31         ;89
-("TXA",  OP_NONE),          # TXA              ;8A
-("PHB",  OP_NONE),          # PHB              ;8B
-("STY",  OP_ABS),           # STY $5150        ;8C
-("STA",  OP_ABS),           # STA $1234        ;8D
-("STX",  OP_ABS),           # STX $2345        ;8E
-("STA",  OP_ABS_L),         # STA $123456      ;8F
+("DEY",  OP_NONE,       0x01),      # DEY              ;88
+("BIT",  OP_IMM,        0x92),      # BIT #$31         ;89
+("TXA",  OP_NONE,       0x01),      # TXA              ;8A
+("PHB",  OP_NONE,       0x31),      # PHB              ;8B
+("STY",  OP_ABS,        0x03),      # STY $5150        ;8C
+("STA",  OP_ABS,        0x03),      # STA $1234        ;8D
+("STX",  OP_ABS,        0x03),      # STX $2345        ;8E
+("STA",  OP_ABS_L,      0x34),      # STA $123456      ;8F
 # 90
 #0x02, 0x02, 0x12, 0x32, 0x02, 0x02, 0x02, 0x32,     # $90-$97
-("BCC",  OP_REL),           # BCC T01          ;$90
-("STA",  OP_ZP_IY),         # STA ($22),Y      ;91
-("STA",  OP_ZP_IND),        # STA ($AA)        ;92
-("STA",  OP_SR_IY),         # STA (1,S),Y      ;93
-("STY",  OP_ZP_X),          # STY $55,X        ;94
-("STA",  OP_ZP_X),          # STA $55,X        ;95
-("STX",  OP_ZP_Y),          # STX $55,Y        ;96
-("STA",  OP_ZP_IY_L),       # STA [$42],Y      ;97
+("BCC",  OP_REL,        0x02),      # BCC T01          ;$90
+("STA",  OP_ZP_IY,      0x02),      # STA ($22),Y      ;91
+("STA",  OP_ZP_IND,     0x12),      # STA ($AA)        ;92
+("STA",  OP_SR_IY,      0x32),      # STA (1,S),Y      ;93
+("STY",  OP_ZP_X,       0x02),      # STY $55,X        ;94
+("STA",  OP_ZP_X,       0x02),      # STA $55,X        ;95
+("STX",  OP_ZP_Y,       0x02),      # STX $55,Y        ;96
+("STA",  OP_ZP_IY_L,    0x32),      # STA [$42],Y      ;97
 # 98
 #0x01, 0x03, 0x01, 0x31, 0x13, 0x03, 0x13, 0x34,     # $98-$9F
-("TYA",  OP_NONE),          # TYA              ;$98
-("STA",  OP_ABS_Y),         # STA $1200,Y      ;99
-("TXS",  OP_NONE),          # TXS              ;9A
-("TXY",  OP_NONE),          # TXY              ;9B
-("STZ",  OP_ABS),           # STZ $5150        ;9C
-("STA",  OP_ABS_X),         # STA $0500,X      ;9D
-("STZ",  OP_ABS_X),         # STZ $5555,X      ;9E
-("STA",  OP_ABS_X_L),       # STA $123456,X    ;9F
+("TYA",  OP_NONE,       0x01),      # TYA              ;$98
+("STA",  OP_ABS_Y,      0x03),      # STA $1200,Y      ;99
+("TXS",  OP_NONE,       0x01),      # TXS              ;9A
+("TXY",  OP_NONE,       0x31),      # TXY              ;9B
+("STZ",  OP_ABS,        0x13),      # STZ $5150        ;9C
+("STA",  OP_ABS_X,      0x03),      # STA $0500,X      ;9D
+("STZ",  OP_ABS_X,      0x13),      # STZ $5555,X      ;9E
+("STA",  OP_ABS_X_L,    0x34),      # STA $123456,X    ;9F
 # A0
 #0x42, 0x02, 0x42, 0x32, 0x02, 0x02, 0x02, 0x32,     # $A0-$A7
-("LDY",  OP_IMM),           # LDY #$44         ;$A0
-("LDA",  OP_ZP_XI),         # LDA ($27,X)      ;A1
-("LDX",  OP_IMM),           # LDX #$24         ;A2
-("LDA",  OP_SR),            # LDA 5,S          ;A3
-("LDY",  OP_ZP),            # LDY $55          ;A4
-("LDA",  OP_ZP),            # LDA $68          ;A5
-("LDX",  OP_ZP),            # LDX $88          ;A6
-("LDA",  OP_ZP_IND_L),      # LDA [$20]        ;A7
+("LDY",  OP_IMM,        0x42),      # LDY #$44         ;$A0
+("LDA",  OP_ZP_XI,      0x02),      # LDA ($27,X)      ;A1
+("LDX",  OP_IMM,        0x42),      # LDX #$24         ;A2
+("LDA",  OP_SR,         0x32),      # LDA 5,S          ;A3
+("LDY",  OP_ZP,         0x02),      # LDY $55          ;A4
+("LDA",  OP_ZP,         0x02),      # LDA $68          ;A5
+("LDX",  OP_ZP,         0x02),      # LDX $88          ;A6
+("LDA",  OP_ZP_IND_L,   0x32),      # LDA [$20]        ;A7
 # A8
 #0x01, 0x82, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $A8-$AF
-("TAY",  OP_NONE),          # TAY              ;$A8
-("LDA",  OP_IMM),           # LDA #$AB         ;$A9
-("TAX",  OP_NONE),          # TAX              ;AA
-("PLB",  OP_NONE),          # PLB              ;AB
-("LDY",  OP_ABS),           # LDY $1234        ;AC
-("LDA",  OP_ABS),           # LDA $1234        ;AD
-("LDX",  OP_ABS),           # LDX $1234        ;AE
-("LDA",  OP_ABS_L),         # LDX $123456        ;AF
+("TAY",  OP_NONE,       0x01),      # TAY              ;$A8
+("LDA",  OP_IMM,        0x82),      # LDA #$AB         ;$A9
+("TAX",  OP_NONE,       0x01),      # TAX              ;AA
+("PLB",  OP_NONE,       0x31),      # PLB              ;AB
+("LDY",  OP_ABS,        0x03),      # LDY $1234        ;AC
+("LDA",  OP_ABS,        0x03),      # LDA $1234        ;AD
+("LDX",  OP_ABS,        0x03),      # LDX $1234        ;AE
+("LDA",  OP_ABS_L,      0x34),      # LDX $123456        ;AF
 # B0
 #0x02, 0x02, 0x12, 0x32, 0x02, 0x02, 0x02, 0x32,     # $B0-$B7
-("BCS",  OP_REL),           # BCS T02          ;$B0  
-("LDA",  OP_ZP_IY),         # LDA ($88),Y      ;B1
-("LDA",  OP_ZP_IND),        # LDA ($9A)        ;B2
-("LDA",  OP_SR_IY),         # LDA (3,S),Y      ;B3
-("LDY",  OP_ZP_X),          # LDY $50,X        ;B4
-("LDA",  OP_ZP_X),          # LDA $50,X        ;B5
-("LDX",  OP_ZP_Y),          # LDX $50,Y        ;B6
-("LDA",  OP_ZP_IY_L),       # LDA [$40],Y      ;B7
+("BCS",  OP_REL,        0x02),      # BCS T02          ;$B0  
+("LDA",  OP_ZP_IY,      0x02),      # LDA ($88),Y      ;B1
+("LDA",  OP_ZP_IND,     0x12),      # LDA ($9A)        ;B2
+("LDA",  OP_SR_IY,      0x32),      # LDA (3,S),Y      ;B3
+("LDY",  OP_ZP_X,       0x02),      # LDY $50,X        ;B4
+("LDA",  OP_ZP_X,       0x02),      # LDA $50,X        ;B5
+("LDX",  OP_ZP_Y,       0x02),      # LDX $50,Y        ;B6
+("LDA",  OP_ZP_IY_L,    0x32),      # LDA [$40],Y      ;B7
 # B8
 #0x01, 0x03, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $B8-$BF
-("CLV",  OP_NONE),          # CLV              ;$B8
-("LDA",  OP_ABS_Y),         # LDA $2525,Y      ;B9
-("TSX",  OP_NONE),          # TSX              ;BA
-("TYX",  OP_NONE),          # TYX              ;BB
-("LDY",  OP_ABS_X),         # LDY $0211,X      ;BC
-("LDA",  OP_ABS_X),         # LDA $2101,X      ;BD
-("LDX",  OP_ABS_Y),         # LDX $2012,Y      ;BE
-("LDA",  OP_ABS_X_L),       # LDA $123456,X    ;BF
+("CLV",  OP_NONE,       0x01),      # CLV              ;$B8
+("LDA",  OP_ABS_Y,      0x03),      # LDA $2525,Y      ;B9
+("TSX",  OP_NONE,       0x01),      # TSX              ;BA
+("TYX",  OP_NONE,       0x31),      # TYX              ;BB
+("LDY",  OP_ABS_X,      0x03),      # LDY $0211,X      ;BC
+("LDA",  OP_ABS_X,      0x03),      # LDA $2101,X      ;BD
+("LDX",  OP_ABS_Y,      0x03),      # LDX $2012,Y      ;BE
+("LDA",  OP_ABS_X_L,    0x34),      # LDA $123456,X    ;BF
 # C0
 #0x42, 0x02, 0x32, 0x32, 0x02, 0x02, 0x02, 0x32,     # $C0-$C7
-("CPY",  OP_IMM),           # CPY #$42         ;$C0
-("CMP",  OP_ZP_XI),         # CMP ($50,X)      ;C1
-("REP",  OP_IMM),           # REP #$30         ;C2
-("CMP",  OP_SR),            # CMP 1,S          ;C3
-("CPY",  OP_ZP),            # CPY $22          ;C4
-("CMP",  OP_ZP),            # CMP $33          ;C5
-("DEC",  OP_ZP),            # DEC $44          ;C6
-("CMP",  OP_ZP_IND_L),      # CMP [$42]        ;C7
+("CPY",  OP_IMM,        0x42),      # CPY #$42         ;$C0
+("CMP",  OP_ZP_XI,      0x02),      # CMP ($50,X)      ;C1
+("REP",  OP_IMM,        0x32),      # REP #$30         ;C2
+("CMP",  OP_SR,         0x32),      # CMP 1,S          ;C3
+("CPY",  OP_ZP,         0x02),      # CPY $22          ;C4
+("CMP",  OP_ZP,         0x02),      # CMP $33          ;C5
+("DEC",  OP_ZP,         0x02),      # DEC $44          ;C6
+("CMP",  OP_ZP_IND_L,   0x32),      # CMP [$42]        ;C7
 # C8
 #0x01, 0x82, 0x01, 0x11, 0x03, 0x03, 0x03, 0x34,     # $C8-$CF
-("INY",  OP_NONE),          # INY              ; $C8
-("CMP",  OP_IMM),           # CMP #$51         ;C9
-("DEX",  OP_NONE),          # DEX              ;CA
-("WAI",  OP_NONE),          # WAI              ;CB
-("CPY",  OP_ABS),           # CPY $4242        ;CC
-("CMP",  OP_ABS),           # CMP $4141        ;CD
-("DEC",  OP_ABS),           # DEC $2525        ;CE
-("CMP",  OP_ABS_L),         # CMP $125050      ;CF
+("INY",  OP_NONE,       0x01),      # INY              ; $C8
+("CMP",  OP_IMM,        0x82),      # CMP #$51         ;C9
+("DEX",  OP_NONE,       0x01),      # DEX              ;CA
+("WAI",  OP_NONE,       0x11),      # WAI              ;CB
+("CPY",  OP_ABS,        0x03),      # CPY $4242        ;CC
+("CMP",  OP_ABS,        0x03),      # CMP $4141        ;CD
+("DEC",  OP_ABS,        0x03),      # DEC $2525        ;CE
+("CMP",  OP_ABS_L,      0x34),      # CMP $125050      ;CF
 # D0
 #0x02, 0x02, 0x12, 0x32, 0x32, 0x02, 0x02, 0x32,     # $D0-$D7
-("BNE",  OP_REL),           # BNE T03          ;$D0
-("CMP",  OP_ZP_IY),         # CMP ($00),Y      ;D1
-("CMP",  OP_ZP_IND),        # CMP ($01)        ;D2
-("CMP",  OP_SR_IY),         # CMP (1,S),Y      ;D3
-("PEI",  OP_ZP),            # PEI $31          ;D4
-("CMP",  OP_ZP_X),          # CMP $99,X        ;D5
-("DEC",  OP_ZP_X),          # DEC $AA,X        ;D6
-("CMP",  OP_ZP_IY_L),       # CMP [$33],Y      ;D7
+("BNE",  OP_REL,        0x02),      # BNE T03          ;$D0
+("CMP",  OP_ZP_IY,      0x02),      # CMP ($00),Y      ;D1
+("CMP",  OP_ZP_IND,     0x12),      # CMP ($01)        ;D2
+("CMP",  OP_SR_IY,      0x32),      # CMP (1,S),Y      ;D3
+("PEI",  OP_ZP,         0x32),      # PEI $31          ;D4
+("CMP",  OP_ZP_X,       0x02),      # CMP $99,X        ;D5
+("DEC",  OP_ZP_X,       0x02),      # DEC $AA,X        ;D6
+("CMP",  OP_ZP_IY_L,    0x32),      # CMP [$33],Y      ;D7
 # D8
 #0x01, 0x03, 0x11, 0x11, 0x33, 0x03, 0x03, 0x34,     # $D8-$DF
-("CLD",  OP_NONE),          # CLD              ;$D8
-("CMP",  OP_ABS_Y),         # CMP $3124,Y      ;D9
-("PHX",  OP_NONE),          # PHX              ;DA
-("STP",  OP_NONE),          # STP              ;DB
-("JML",  OP_ABS_IND_L),     # JML [$1234]      ;DC
-("CMP",  OP_ABS_X),         # CMP $5000,X      ;DD
-("DEC",  OP_ABS_X),         # DEC $5150,X      ;DE
-("CMP",  OP_ABS_X_L),       # CMP $123456,X    ;DF
+("CLD",  OP_NONE,       0x01),      # CLD              ;$D8
+("CMP",  OP_ABS_Y,      0x03),      # CMP $3124,Y      ;D9
+("PHX",  OP_NONE,       0x11),      # PHX              ;DA
+("STP",  OP_NONE,       0x11),      # STP              ;DB
+("JML",  OP_ABS_IND_L,  0x33),      # JML [$1234]      ;DC
+("CMP",  OP_ABS_X,      0x03),      # CMP $5000,X      ;DD
+("DEC",  OP_ABS_X,      0x03),      # DEC $5150,X      ;DE
+("CMP",  OP_ABS_X_L,    0x34),      # CMP $123456,X    ;DF
 # E0
 #0x42, 0x02, 0x32, 0x32, 0x02, 0x02, 0x02, 0x32,     # $E0-$E7
-("CPX",  OP_IMM),           # CPX #$FF         ;$E0
-("SBC",  OP_ZP_XI),         # SBC ($01,X)      ;E1
-("SEP",  OP_IMM),           # SEP #$00         ;E2
-("SBC",  OP_SR),            # SBC 1,S          ;E3
-("CPX",  OP_ZP),            # CPX $33          ;E4
-("SBC",  OP_ZP),            # SBC $99          ;E5
-("INC",  OP_ZP),            # INC $28          ;E6
-("SBC",  OP_ZP_IND_L),      # SBC [$42]        ;E7
+("CPX",  OP_IMM,        0x42),      # CPX #$FF         ;$E0
+("SBC",  OP_ZP_XI,      0x02),      # SBC ($01,X)      ;E1
+("SEP",  OP_IMM,        0x32),      # SEP #$00         ;E2
+("SBC",  OP_SR,         0x32),      # SBC 1,S          ;E3
+("CPX",  OP_ZP,         0x02),      # CPX $33          ;E4
+("SBC",  OP_ZP,         0x02),      # SBC $99          ;E5
+("INC",  OP_ZP,         0x02),      # INC $28          ;E6
+("SBC",  OP_ZP_IND_L,   0x32),      # SBC [$42]        ;E7
 # E8
 #0x01, 0x82, 0x01, 0x31, 0x03, 0x03, 0x03, 0x34,     # $E8-$EF
-("INX",  OP_NONE),          # INX              ;$E8
-("SBC",  OP_IMM),           # SBC #$12         ;E9
-("NOP",  OP_NONE),          # NOP              ;EA
-("XBA",  OP_NONE),          # XBA              ;EB
-("INC",  OP_ABS),           # CPX $3124        ;EC
-("SBC",  OP_ABS),           # SBC $5101        ;ED
-("INC",  OP_ABS),           # INC $2222        ;EE
-("SBC",  OP_ABS_L),         # SBC $123456      ;EF
+("INX",  OP_NONE,       0x01),      # INX              ;$E8
+("SBC",  OP_IMM,        0x82),      # SBC #$12         ;E9
+("NOP",  OP_NONE,       0x01),      # NOP              ;EA
+("XBA",  OP_NONE,       0x31),      # XBA              ;EB
+("INC",  OP_ABS,        0x03),      # CPX $3124        ;EC
+("SBC",  OP_ABS,        0x03),      # SBC $5101        ;ED
+("INC",  OP_ABS,        0x03),      # INC $2222        ;EE
+("SBC",  OP_ABS_L,      0x34),      # SBC $123456      ;EF
 # F0
 #0x02, 0x02, 0x12, 0x32, 0x33, 0x02, 0x02, 0x32,     # $F0-$F7
-("BEQ",  OP_REL),           # BEQ T03          ;$F0
-("SBC",  OP_ZP_IY),         # SBC ($94),Y      ;F1
-("SBC",  OP_ZP_IND),        # SBC ($88)        ;F2
-("SBC",  OP_SR_IY),         # SBC (4,S),Y      ;F3
-("PEA",  OP_IMM),           # PEA T03          ;F4
-("SBC",  OP_ZP_X),          # SBC $44,X        ;F5
-("INC",  OP_ZP_X),          # INC $44,X        ;F6
-("SBC",  OP_ZP_IY_L),       # SBC [$42],Y      ;F7
+("BEQ",  OP_REL,        0x02),      # BEQ T03          ;$F0
+("SBC",  OP_ZP_IY,      0x02),      # SBC ($94),Y      ;F1
+("SBC",  OP_ZP_IND,     0x12),      # SBC ($88)        ;F2
+("SBC",  OP_SR_IY,      0x32),      # SBC (4,S),Y      ;F3
+("PEA",  OP_IMM,        0x33),      # PEA T03          ;F4
+("SBC",  OP_ZP_X,       0x02),      # SBC $44,X        ;F5
+("INC",  OP_ZP_X,       0x02),      # INC $44,X        ;F6
+("SBC",  OP_ZP_IY_L,    0x32),      # SBC [$42],Y      ;F7
 # F8
 #0x01, 0x03, 0x11, 0x31, 0x33, 0x03, 0x03, 0x34      # $F8-$FF
-("SED",  OP_NONE),          # SED              ;$F8
-("SBC",  OP_ABS_Y),         # SBC $3141,Y      ;F9
-("PLX",  OP_NONE),          # PLX              ;FA
-("XCE",  OP_NONE),          # XCE              ;FB
-("JSR",  OP_ABS_X_IND),     # JSR ($8085,X)    ;FC
-("SBC",  OP_ABS_X),         # SBC $9980,X      ;FD
-("INC",  OP_ABS_X),         # INC $9900,X      ;FE
-("SBC",  OP_ABS_X_L)        # SBC $123456,X    ;$FF
+("SED",  OP_NONE,       0x01),      # SED              ;$F8
+("SBC",  OP_ABS_Y,      0x03),      # SBC $3141,Y      ;F9
+("PLX",  OP_NONE,       0x11),      # PLX              ;FA
+("XCE",  OP_NONE,       0x31),      # XCE              ;FB
+("JSR",  OP_ABS_X_IND,  0x33),      # JSR ($8085,X)    ;FC
+("SBC",  OP_ABS_X,      0x03),      # SBC $9980,X      ;FD
+("INC",  OP_ABS_X,      0x03),      # INC $9900,X      ;FE
+("SBC",  OP_ABS_X_L,    0x04)       # SBC $123456,X    ;$FF
 )
 
 # A mode parameter is needed to tell disassembler how M and X flags are set, 
@@ -433,9 +453,8 @@ CPU_MODE_NMOS_6502 = 5  # A real NMOS 6502
 def get_mnemonic(opcode):
     return opcode_table[opcode][0]
 
-# Get instruction length from tables
 def get_ilen(opcode, mode):
-    lut = op_decode[opcode]
+    lut = opcode_table[opcode][2]
     if (mode == CPU_MODE_NMOS_6502) and (lut & 0x10):
         return 0    # Instruction not supported on an actual NMOS 6502
     if (mode == CPU_MODE_CMOS_6502) and (lut & 0x20):
@@ -448,7 +467,6 @@ def get_ilen(opcode, mode):
         if (mode & 1) == 0:
             irl += 1
     return irl
-
 def get_address_mode(opcode):
     return opcode_table[opcode][1]
 
