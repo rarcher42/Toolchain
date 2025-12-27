@@ -27,25 +27,26 @@ OP_NONE = 0
 OP_A = 1 
 OP_IMM = 2
 OP_ABS = 3
-OP_ABS_IND = 4 # "AI"
-OP_ABS_IND_L = 5   # "AIL"
-OP_ABS_X = 6 # "AX"
-OP_ABS_Y = 7 # "AY"
-OP_ABS_X_L = 8  # "AXL"
-OP_ABS_X_IND = 9 # "AXI"
-OP_ZP = 10
-OP_ZP_IND = 11
-OP_ZP_IND_L = 12
-OP_ZP_X = 13
-OP_ZP_Y = 14    # "ZY"
-OP_ZP_XI = 15  
-OP_ZP_IY = 16
-OP_ZP_IY_L = 17 # ZILY
-OP_REL = 18
-OP_REL_L = 19
-OP_SR = 20
-OP_SR_IY = 21 # "SIY"
-OP_2OPS = 22  # "TWO"
+OP_ABS_L = 4
+OP_ABS_IND = 5 # "AI"
+OP_ABS_IND_L = 6   # "AIL"
+OP_ABS_X = 7 # "AX"
+OP_ABS_Y = 8 # "AY"
+OP_ABS_X_L = 9  # "AXL"
+OP_ABS_X_IND = 10 # "AXI"
+OP_ZP = 11
+OP_ZP_IND = 12
+OP_ZP_IND_L = 13
+OP_ZP_X = 14
+OP_ZP_Y = 15    # "ZY"
+OP_ZP_XI = 16  
+OP_ZP_IY = 17
+OP_ZP_IY_L = 18 # ZILY
+OP_REL = 19
+OP_REL_L = 20
+OP_SR = 21
+OP_SR_IY = 22 # "SIY"
+OP_2OPS = 23  # "TWO"
     
 
 opcode_table = (
@@ -67,7 +68,7 @@ opcode_table = (
 ("TSB",     (3,3,3,3,3,0), (OP_ABS)),           # TSB $0300        ;$0C
 ("ORA",     (3,3,3,3,3,3), (OP_ABS)),           # ORA $4242        ;$0D
 ("ASL",     (3,3,3,3,3,3), (OP_ABS)),           # ASL $5150        ;$0E
-("ORA",     (4,4,4,4,0,0), (OP_ABS)),           # ORA $123124      ;$0F
+("ORA",     (4,4,4,4,0,0), (OP_ABS_L)),         # ORA $123124      ;$0F
 # 10
 ("BPL",     (2,2,2,2,2,2), (OP_REL)),           # BPL HERE         ;$10
 ("ORA",     (2,2,2,2,2,2), (OP_ZP_IY)),         # ORA ($42),y      ;$11
@@ -89,7 +90,7 @@ opcode_table = (
 # 20
 ("JSR",     (3,3,3,3,3,3), (OP_ABS)),           # JSR HERE         ;$20 
 ("AND",     (2,2,2,2,2,2), (OP_ZP_XI)),         # AND ($69,X)      ;21
-("JSL",     (4,4,4,4,0,0), (OP_ABS)),           # JSL HERE         ;22
+("JSL",     (4,4,4,4,0,0), (OP_ABS_L)),           # JSL HERE         ;22
 ("AND",     (2,2,2,2,0,0), (OP_SR)),            # AND 1,S          ;23
 ("BIT",     (2,2,2,2,2,2), (OP_ZP)),            # BIT $20          ;24
 ("AND",     (2,2,2,2,2,2), (OP_ZP)),            # AND $30          ;25
@@ -103,7 +104,7 @@ opcode_table = (
 ("BIT",     (3,3,3,3,3,3), (OP_ABS)),           # BIT $0BCD        ;2C
 ("AND",     (3,3,3,3,3,3), (OP_ABS)),           # AND $0DEF        ;2D
 ("ROL",     (3,3,3,3,3,3), (OP_ABS)),           # ROL $5150        ;2E
-("AND",     (4,4,4,4,0,0), (OP_ABS)),           # AND $123456      ;2F
+("AND",     (4,4,4,4,0,0), (OP_ABS_L)),         # AND $123456      ;2F
 #30          
 ("BMI",     (2,2,2,2,2,2), (OP_REL)),           # BMI HERE         ;$30
 ("AND",     (2,2,2,2,2,2), (OP_ZP_IY)),         # AND ($20),Y      ;31
@@ -139,7 +140,7 @@ opcode_table = (
 ("JMP",     (3,3,3,3,3,3), (OP_ABS)),           # JMP $2A04        ;4C
 ("EOR",     (3,3,3,3,3,3), (OP_ABS)),           # EOR $ABCD        ;4D
 ("LSR",     (3,3,3,3,3,3), (OP_ABS)),           # LSR $2525        ;4E
-("EOR",     (4,4,4,4,0,0), (OP_ABS)),           # EOR $123456      ;4F
+("EOR",     (4,4,4,4,0,0), (OP_ABS_L)),         # EOR $123456      ;4F
 # 50
 ("BVC",     (2,2,2,2,2,2), (OP_REL)),           # BVC THERE        ;$50
 ("EOR",     (2,2,2,2,2,2), (OP_ZP_IY)),         # EOR ($21),Y      ;51
@@ -154,7 +155,7 @@ opcode_table = (
 ("EOR",     (3,3,3,3,3,3), (OP_ABS_Y)),         # EOR $0200,Y      ;59
 ("PHY",     (1,1,1,1,1,0), (OP_NONE)),          # PHY              ;5A
 ("TCD",     (1,1,1,1,0,0), (OP_NONE)),          # TCD              ;5B
-("JML",     (4,4,4,4,0,0), (OP_ABS)),           # JML $123456      ;5C
+("JML",     (4,4,4,4,0,0), (OP_ABS_L)),         # JML $123456      ;5C
 ("EOR",     (3,3,3,3,3,3), (OP_ABS_X)),         # EOR $1234,X      ;5D
 ("LSR",     (3,3,3,3,3,3), (OP_ABS_X)),         # LSR $4231,X      ;5E
 ("EOR",     (4,4,4,4,0,0), (OP_ABS_X_L)),       # EOR $123456,X    ;5F
@@ -175,7 +176,7 @@ opcode_table = (
 ("JMP",     (3,3,3,3,3,3), (OP_ABS_IND)),       # JMP ($FFFC)      ;6C
 ("ADC",     (3,3,3,3,3,3), (OP_ABS)),           # ADC $1234        ;6D
 ("ROR",     (3,3,3,3,3,3), (OP_ABS)),           # ROR $2345        ;6E
-("ADC",     (4,4,4,4,0,0), (OP_ABS)),           # ADC $123456      ;6F
+("ADC",     (4,4,4,4,0,0), (OP_ABS_L)),         # ADC $123456      ;6F
 # 70
 ("BVS",     (2,2,2,2,2,2), (OP_REL)),           # BVS THERE        ;$70
 ("ADC",     (2,2,2,2,2,2), (OP_ZP_IY)),         # ADC ($21),Y      ;71
@@ -204,14 +205,14 @@ opcode_table = (
 ("STX",     (2,2,2,2,2,2), (OP_ZP)),            # STX $99          ;86
 ("STA",     (2,2,2,2,0,0), (OP_ZP_IND_L)),      # STA [$55]        ;87
 # 88
-("BIT",     (3,3,2,2,2,0), (OP_IMM)),           # BIT #$31         ;89
 ("DEY",     (1,1,1,1,1,1), (OP_NONE)),          # DEY              ;88
+("BIT",     (3,3,2,2,2,0), (OP_IMM)),           # BIT #$31         ;89
 ("TXA",     (1,1,1,1,1,1), (OP_NONE)),          # TXA              ;8A
 ("PHB",     (1,1,1,1,0,0), (OP_NONE)),          # PHB              ;8B
 ("STY",     (3,3,3,3,3,3), (OP_ABS)),           # STY $5150        ;8C
 ("STA",     (3,3,3,3,3,3), (OP_ABS)),           # STA $1234        ;8D
 ("STX",     (3,3,3,3,3,3), (OP_ABS)),           # STX $2345        ;8E
-("STA",     (4,4,4,4,0,0), (OP_ABS)),           # STA $123456      ;8F
+("STA",     (4,4,4,4,0,0), (OP_ABS_L)),         # STA $123456      ;8F
 # 90
 ("BCC",     (2,2,2,2,2,2), (OP_REL)),           # BCC T01          ;$90
 ("STA",     (2,2,2,2,2,2), (OP_ZP_IY)),         # STA ($22),Y      ;91
@@ -239,16 +240,15 @@ opcode_table = (
 ("LDA",     (2,2,2,2,2,2), (OP_ZP)),            # LDA $68          ;A5
 ("LDX",     (2,2,2,2,2,2), (OP_ZP)),            # LDX $88          ;A6
 ("LDA",     (2,2,2,2,0,0), (OP_ZP_IND_L)),      # LDA [$20]        ;A7
-
 # A8
-("LDA",     (3,3,2,2,2,2), (OP_IMM)),           # LDA #$AB         ;$A9
 ("TAY",     (1,1,1,1,1,1), (OP_NONE)),          # TAY              ;$A8
+("LDA",     (3,3,2,2,2,2), (OP_IMM)),           # LDA #$AB         ;$A9
 ("TAX",     (1,1,1,1,1,1), (OP_NONE)),          # TAX              ;AA
 ("PLB",     (1,1,1,1,0,0), (OP_NONE)),          # PLB              ;AB
 ("LDY",     (3,3,3,3,3,3), (OP_ABS)),           # LDY $1234        ;AC
 ("LDA",     (3,3,3,3,3,3), (OP_ABS)),           # LDA $1234        ;AD
 ("LDX",     (3,3,3,3,3,3), (OP_ABS)),           # LDX $1234        ;AE
-("LDA",     (4,4,4,4,0,0), (OP_ABS)),           # LDX $1234        ;AF
+("LDA",     (4,4,4,4,0,0), (OP_ABS_L)),         # LDX $123456        ;AF
 
 # B0
 ("BCS",     (2,2,2,2,2,2), (OP_REL)),           # BCS T02          ;$B0  
@@ -285,7 +285,7 @@ opcode_table = (
 ("CPY",     (3,3,3,3,3,3), (OP_ABS)),           # CPY $4242        ;CC
 ("CMP",     (3,3,3,3,3,3), (OP_ABS)),           # CMP $4141        ;CD
 ("DEC",     (3,3,3,3,3,3), (OP_ABS)),           # DEC $2525        ;CE
-("CMP",     (4,4,4,4,0,0), (OP_ABS)),           # CMP $125050      ;CF
+("CMP",     (4,4,4,4,0,0), (OP_ABS_L)),         # CMP $125050      ;CF
 # D0
 ("BNE",     (2,2,2,2,2,2), (OP_REL)),           # BNE T03          ;$D0
 ("CMP",     (2,2,2,2,2,2), (OP_ZP_IY)),         # CMP ($00),Y      ;D1
@@ -321,7 +321,7 @@ opcode_table = (
 ("INC",     (3,3,3,3,3,3), (OP_ABS)),           # CPX $3124        ;EC
 ("SBC",     (3,3,3,3,3,3), (OP_ABS)),           # SBC $5101        ;ED
 ("INC",     (3,3,3,3,3,3), (OP_ABS)),           # INC $2222        ;EE
-("SBC",     (4,4,4,4,0,0), (OP_ABS)),           # SBC $123456      ;EF
+("SBC",     (4,4,4,4,0,0), (OP_ABS_L)),         # SBC $123456      ;EF
 # F0
 ("BEQ",     (2,2,2,2,2,2), (OP_REL)),           # BEQ T03          ;$F0
 ("SBC",     (2,2,2,2,2,2), (OP_ZP_IY)),         # SBC ($94),Y      ;F1
@@ -498,14 +498,11 @@ class Disasm:
             else:
                 ost += " #$%02X " % val
         elif op_admode == OP_ABS:
-            if self.ir_len == 4:
-                ost += " $%06X " % val
-            elif self.ir_len == 3:
-                ost += " $%04X " % val
-            else:
-                ost += " $%02X " % val
+            ost += " $%04X " % val
         elif op_admode == OP_ZP:
             ost += " $%02X " % val
+        elif op_admode == OP_ABS_L:
+            ost += " $%06X " % val
         elif op_admode == OP_REL:
             if (val > 0x7F):
                 val = 0x100 - val
@@ -1061,6 +1058,13 @@ def test_go(address):
 
 if __name__ == "__main__":
     mem = Memory()
+    for op in range(256):
+        oplen = opcode_table[op][1][0:4]
+        ref = oplen[0]
+        for i in range(1,4):
+            if oplen[i] != ref:
+                print("%02X: %s" % (op, oplen))
+            
     # print(len(opcode_table))
     # M0X0
     mem.load_srec("allops_m0x0.s19")
