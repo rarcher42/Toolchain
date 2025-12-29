@@ -1186,6 +1186,25 @@ def test_go(address):
 
 if __name__ == "__main__":
     mem = Memory()
+    i = 0
+    print("op_tbl opcode_table = {")
+    for op in opcode_table:
+        s = "{\""
+        s += op[0]
+        s += "\","
+        s += "0x%02X" % op[2]
+        s +=  ","
+        s += "%d" % op[1]
+        s += "},"
+        sl = len(s)
+        if 20 - sl > 0:
+            s += ' '*(20 - sl)
+        s += "//"
+        s += "$%02X" % i
+        i += 1
+        print(s)
+    print("}")
+    exit(0)
     '''
     opextra = list()
     for op in range(256):
