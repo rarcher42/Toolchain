@@ -6,15 +6,6 @@
 
 // Ugly legacy stuff - replace with structured memory with attributes
 //
-#define CPU_MODE_M0X0 (0)
-#define CPU_MODE_M0X1 (1)
-#define CPU_MODE_M1X0 (2)
-#define CPU_MODE_M1X1 (3)  	// Also valid for E=1 for disassembly
-#define CPU_MODE_NMOS_6502 (4)
-#define CPU_MODE_CMOS_6502 (5)
-
-
-
 uint8_t *oldmem;	// 16 MB of memory space for first-cut implementation
 uint32_t start_address;	// Lowest address loaded by load_srec()
 uint32_t end_address;	// Highest address loaded by load_srec()
@@ -289,21 +280,21 @@ uint8_t get_oplen (uint8_t op)
     uint8_t oplen;
 
     sizeinfo = opcode_table[op].sizeinfo;
-    if ((op_mode == CPU_MODE_NMOS_6502) && (sizeinfo & 0x10)) { 
+    if ((op_mode == CPU_MODE_NMOS_6502) && (sizeinfo & NOT_6502)) { 
         printf("Unimplemented NMOS 6502 opcode $%02X\n", op);
 	return 0;    // Not implemented!
     }
-    if ((op_mode == CPU_MODE_CMOS_6502) && (sizeinfo & 0x20)) {
+    if ((op_mode == CPU_MODE_CMOS_6502) && (sizeinfo & NOT_65C02)) {
         printf("Unimplemented CMOS 65c02 opcode $%02X\n", op);
 	return 0;    // Not implemented!
     }
     oplen = sizeinfo & 0x7;  // Extract length bits
-    if (sizeinfo & 0x80) {
+    if ((op_mode < 4) && (sizeinfo & M_ADDS)) {
 	// Instruction:  add 1 byte if M flag is set
         if ((op_mode & 2) == 0) {
 	    ++oplen;
 	}
-    } else if (sizeinfo & 0x40) {
+    } else if ((op_mode < 4) && (sizeinfo & M_ADDS))  {
         if ((op_mode & 1) == 0) {
 	    ++oplen;
 	}
@@ -483,10 +474,37 @@ int main(void)
     if (oldmem == NULL) {
         exit(0);
     }
+    
     load_srec("allops_m0x0.s19");
     op_mode = 0;
-    printf("**** sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    printf("**** M0X0 sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
+    
+    load_srec("allops_m0x1.s19");
+    op_mode = 1;
+    printf("****  M0X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    disasm(start_address, end_address);
+    
+    load_srec("allops_m1x0.s19");
+    op_mode = 2;
+    printf("****  M1X0  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    disasm(start_address, end_address);
+  
+	load_srec("allops_m1x1.s19");
+    op_mode = 3;
+    printf("****  M1X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    disasm(start_address, end_address);
+    
+    load_srec("allops_65c02.s19");
+    op_mode = 4;
+    printf("****  65c02  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    disasm(start_address, end_address);
+    
+    load_srec("allops_6502.s19");
+    op_mode = 5;
+    printf("****  6502  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    disasm(start_address, end_address);
+    
     exit(0);
     init_mem();
     print_block_list();

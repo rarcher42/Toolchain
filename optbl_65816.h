@@ -5,7 +5,7 @@ typedef enum
         OP_NONE = 0, OP_A, OP_IMM, OP_ABS, OP_ABS_L, OP_ABS_IND, OP_ABS_IND_L,
         OP_ABS_X, OP_ABS_Y, OP_ABS_X_L, OP_ABS_X_IND, OP_ZP,
         OP_ZP_IND, OP_ZP_IND_L, OP_ZP_X, OP_ZP_Y, OP_ZP_XI,
-        OP_ZP_IY, OP_ZP_IY_L, OP_REL = 19, OP_REL_L, OP_SR, OP_SR_IY,OP_2OPS
+        OP_ZP_IY, OP_ZP_IY_L, OP_REL, OP_REL_L, OP_SR, OP_SR_IY,OP_2OPS
 } address_mode_t;
 
 
@@ -26,6 +26,12 @@ const uint8_t X_ADDS = 0x40;	// If X = 0, then add 1 to inst len
 const uint8_t NOT_65C02 = 0x20;		// Instruction not supported 65c02
 const uint8_t NOT_6502 = 0x10;		// Instruction not supported NMOS
 
+#define CPU_MODE_M0X0 (0)
+#define CPU_MODE_M0X1 (1)
+#define CPU_MODE_M1X0 (2)
+#define CPU_MODE_M1X1 (3)  	// Also valid for E=1 for disassembly
+#define CPU_MODE_CMOS_6502 (4)
+#define CPU_MODE_NMOS_6502 (5)
 
 op_tbl opcode_table[] = {
 {"BRK",	LEN1,	OP_NONE},     //$00
