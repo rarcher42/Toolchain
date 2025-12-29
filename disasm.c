@@ -6,7 +6,6 @@
 
 // Ugly legacy stuff - replace with structured memory with attributes
 //
-uint8_t *oldmem;	// 16 MB of memory space for first-cut implementation
 uint32_t start_address;	// Lowest address loaded by load_srec()
 uint32_t end_address;	// Highest address loaded by load_srec()
 uint32_t pc;
@@ -25,8 +24,13 @@ typedef struct {
     uint8_t *mem;
     uint32_t saddr;
     uint32_t eaddr;
-    uint8_t perms; // Read, Write, valid, special (e.g. i/o)
-    int (*implementation)(uint32_t addr);
+    // Each device has an implementation FSM / code that understands
+    // the device's characteristics.  For example, read/write vs.
+    // read only, block write (FLASH), and peripheral states
+    // implmentation(address, data, wr)
+    // (For wr=1, data = data to write
+    // for wr=0, data is don't care)
+    int (*implementation)(void *self, uint32_t, uint8_t, uint8_t);
     void *next;
 } mem_block_descriptor_t;
 
@@ -37,7 +41,8 @@ void init_mem(void)
     mem_list_head = NULL;
 }
 
-int alloc_block(uint32_t saddr, uint32_t eaddr, uint8_t perms)
+int alloc_block(uint32_t saddr, uint32_t eaddr,
+    int (*handler)(void *self, uint32_t addr, uint8_t data, uint8_t wr))
 {
     uint32_t bl;
     uint8_t *mp;	// Allocated memory block
@@ -60,7 +65,7 @@ int alloc_block(uint32_t saddr, uint32_t eaddr, uint8_t perms)
     mbd->mem = mp;
     mbd->saddr = saddr;
     mbd->eaddr = eaddr;
-    mbd->perms = perms;
+    mbd->implementation = handler;
     mbd->next = mem_list_head;
     mem_list_head = mbd;
     return 0;    
@@ -78,11 +83,11 @@ int del_block_containing(uint32_t ma)
 	    printf("Found it!  0x%08X-0x%08X", mbp->saddr, mbp->eaddr);
 	    if (prev == NULL) {
                 // Delete first item on the list
-		mem_list_head = mbp->next;
-		free(mbp->mem);		// Free actual memory
-		free(mbp);		// Free descriptor
+			mem_list_head = mbp->next;
+			free(mbp->mem);		// Free actual memory
+			free(mbp);		// Free descriptor
 	    } else {
-                prev->next = mbp->next;	// Link across deleted element
+			prev->next = mbp->next;	// Link across deleted element
 		free(mbp->mem);
 		free(mbp);
 	    }
@@ -116,14 +121,39 @@ void print_block_list(void)
 
     mbp = mem_list_head;
     while (mbp != NULL) {
-	printf("====================================\n");
-	printf("Start address: $%08X\n", mbp->saddr);
-	printf("End   address: $%08X\n", mbp->eaddr);
-        printf("Perms        : $%02X\n", mbp->perms);
-        printf("Next         : %p\ni\n", mbp->next);	
-        
+		printf("====================================\n");
+		printf("Start address: $%08X\n", mbp->saddr);
+		printf("End   address: $%08X\n", mbp->eaddr);
+		printf("Next         : %p\ni\n", mbp->next);	
         mbp = mbp->next;
     }
+}
+
+
+int write_byte(uint32_t addr, uint8_t data)
+{
+	mem_block_descriptor_t *bdp;
+	// Implement caching!  For now, just make it work
+	bdp = find_block_descriptor(addr);
+	if (bdp == NULL) {
+		printf("LOCATION %08X not found!\n", addr);
+		return -1;
+	}
+	return bdp->implementation((void *) bdp, addr, data, 1);	// Do write via handler
+}
+
+int read_byte(uint32_t addr)
+{
+	mem_block_descriptor_t *bdp;
+	uint8_t val;
+	// Implement caching!  For now, just make it work
+	bdp = find_block_descriptor(addr);
+	if (bdp == NULL) {
+		printf("LOCATION %08X not found!\n", addr);
+		return -1;
+	}
+	val = bdp->implementation((void *) bdp, addr, 0, 0);	// Do read via handler
+	return val;
 }
 
 const int MAX_LINE = 130;
@@ -155,14 +185,14 @@ uint32_t from_hex_str(uint8_t *s, uint8_t n)
     return sum;
 }
 
-uint32_t from_hex(uint8_t *numseq, uint8_t n)
+uint32_t from_hex(uint32_t addr, uint8_t n)
 {
     uint32_t sum = 0;
     int i;
  
     for (i = n-1; i >= 0; --i) {
         // printf("_%02X_", numseq[i]);
-        sum = 256*sum + numseq[i];
+        sum = 256*sum + read_byte(addr+i);
     }
     return sum;
 }
@@ -175,7 +205,7 @@ void dump_hex(uint32_t sa, uint32_t ea)
         if ((addr & 0xF) == 0) {
             printf("\n%08X: ", addr);
 	} 
-	printf("%02X ", oldmem[addr]);
+	printf("%02X ", read_byte(addr));
     }
     printf("\n");
 }
@@ -196,6 +226,7 @@ int load_srec(char *fn)
     fp = fopen(fn, "r");
     if (fp != NULL) {
         while (fgets(nextline, MAX_LINE, fp)) {
+		    puts(nextline);
 	    if (nextline[0] != 'S') {
                 return -1;
 	    }
@@ -204,27 +235,27 @@ int load_srec(char *fn)
             case '0':
 		break;
 	    case '1':
-		nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 3;
-	        addr = from_hex_str((uint8_t *) &nextline[4], 4);
-		j = 8;
-		while (nbytes-- > 0) {
-                    b = from_hex_str((uint8_t *) &nextline[j], 2);
-		    oldmem[addr] = b;
-		    if (addr < start_address)
+			nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 3;
+			addr = from_hex_str((uint8_t *) &nextline[4], 4);
+			j = 8;
+			while (nbytes-- > 0) {
+				b = from_hex_str((uint8_t *) &nextline[j], 2);
+				write_byte(addr, b);
+				if (addr < start_address)
 	               start_address = addr; 
-		    if (addr > end_address)
-			end_address = addr;
-                    j += 2;	
-	            addr += 1;	    
-		}
-                break;
+				if (addr > end_address)
+					end_address = addr;
+				j += 2;	
+				addr += 1;	    
+			}
+        break;
 	    case '2':
-		nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 4;
-                addr = from_hex_str((uint8_t *) &nextline[4], 6);
-                j = 10;
-                while (nbytes-- > 0) {
-                    b = from_hex_str((uint8_t *) &nextline[j], 2);
-                    oldmem[addr] = b;
+			nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 4;
+            addr = from_hex_str((uint8_t *) &nextline[4], 6);
+            j = 10;
+            while (nbytes-- > 0) {
+				b = from_hex_str((uint8_t *) &nextline[j], 2);
+                    write_byte(addr, b);
                     if (addr < start_address)
                        start_address = addr;
                     if (addr > end_address)
@@ -233,14 +264,14 @@ int load_srec(char *fn)
                     addr += 1;
                 }
 		break;
-            case '3':
-		nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 5;
-                addr = from_hex_str((uint8_t *) &nextline[4], 8);
+        case '3':
+			nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 5;
+            addr = from_hex_str((uint8_t *) &nextline[4], 8);
                 j = 12;
                 while (nbytes-- > 0) {
                     b = from_hex_str((uint8_t *) &nextline[j], 2);
-                    oldmem[addr] = b;
-                    if (addr < start_address)
+                    write_byte(addr, b);
+					if (addr < start_address)
                        start_address = addr;
                     if (addr > end_address)
                         end_address = addr;
@@ -311,17 +342,16 @@ int disasm_one(uint32_t my_addr, char *outs)
     uint8_t op;
     uint8_t oplen;
     address_mode_t addr_mode;
-
     char param[20];
 
     outs[0] = (char) 0;
-    param[0] = (char) 0; 
-    op = oldmem[my_addr];
+    param[0] = (char) 0;
+    op = read_byte(my_addr);
     oplen = get_oplen(op);
     addr_mode = get_addr_mode(op);
     val = 0;
     if (oplen > 1) {
-        val = from_hex(&oldmem[my_addr+1], oplen-1);
+        val = from_hex(my_addr+1, oplen-1);
     }
     
     sprintf(outs, "%s ", opcode_table[op].ops);
@@ -427,8 +457,8 @@ int disasm_one(uint32_t my_addr, char *outs)
         break;
 
     case OP_2OPS:
-	uint8_t a = from_hex(&oldmem[my_addr + 1], 1);
-	uint8_t b = from_hex(&oldmem[my_addr + 2], 1);
+	uint8_t a = from_hex(my_addr + 1, 1);
+	uint8_t b = from_hex(my_addr + 2, 1);
 	sprintf(param, "%02X,%02X ", a, b);
         break;
     default:
@@ -449,15 +479,15 @@ void disasm (uint32_t sa, uint32_t ea)
     lpc = sa;
     while (lpc <= ea) {
 	printf("%06X: ", lpc);
-	op_len = get_oplen(oldmem[lpc]);
+	op_len = get_oplen(read_byte(lpc));
         for (i = 0; i < 4; i++) {
             if (i < op_len) {
-                printf("%02X ", oldmem[lpc+i]);
+                printf("%02X ", read_byte(lpc+i));
 	    } else {
 	        printf("   ");
 	    }
 	}
-        disasm_one(lpc, outs);
+    disasm_one(lpc, outs);
 	if (op_len == 0) {
             printf("Invalid op-code: aborting disassembly!\n");
 	    // This probably isn't what we want to do, usually.  But good
@@ -470,15 +500,108 @@ void disasm (uint32_t sa, uint32_t ea)
     } 
 }
 
-int main(void)
+int handler_via1 (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
-    int i;
-    oldmem = malloc(16*1024*1024);
-    if (oldmem == NULL) {
-        exit(0);
-    }
-    
+	printf("called handler_via1($%08X, $%02X. wr=%d)\n", addr, data, wr);
+	return 0;
+}
+
+int handler_via2 (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+	printf("called handler_via2($%08X, $%02X), wr=%d\n", addr, data, wr);
+	return 0;
+}
+
+int handler_acia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+	printf("called handler_acia($%08X, $%02X), wr=%d\n", addr, data, wr);
+	return 0;
+}
+
+int handler_pia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+	printf("called handler_pia($%08X, $%02X), wr=%d\n", addr, data, wr);
+	return 0;
+}
+
+int handler_io_unimplemented(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+	printf("called handler_io_unimplemented($%08X, $%02X)\n, wr=%d", addr, data, wr);
+	return 0;
+}
+
+
+int handler_null(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+	printf("called handler_null($%08X, $%02X), wr=%d\n", addr, data, wr);
+	return 0;
+}
+
+int handler_ram(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+	mem_block_descriptor_t *p;
+	
+	p = (mem_block_descriptor_t *) bdp;
+	if (p == NULL) {
+		printf("\nCannot locate RAM descriptor: R/W operation failed!\n");
+		return -1;
+	}
+	if (wr) {
+		//cprintf("Writing $%02X to RAM location %08X\n", data, addr);
+		p->mem[addr - p->saddr] = data;
+		return 0;
+	} else {
+		// printf("Reading from RAM location %08X\n", addr);
+		return p->mem[addr - p->saddr];
+	}
+}
+
+int handler_rom(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+
+	mem_block_descriptor_t *p;
+	
+	p = (mem_block_descriptor_t *) bdp;
+	if (p == NULL) {
+		printf("\nCannot locate ROM descriptor: R/W operation failed!\n");
+		return -1;
+	}
+	if (wr) {
+		printf("Error:  cannot write to ROM location $%08X\n", addr);
+		return 0;
+	} else {
+		printf("Reading from ROM location $%08X\n", addr);
+		return p->mem[addr - p->saddr];
+	}
+}
+
+
+int handler_flash(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+{
+	return 0;
+}
+
+
+
+int main(void)
+{	
+    init_mem();
+    alloc_block(0x7F00, 0x7F1F, handler_io_unimplemented);	// XBUS0 (not implmemented)
+    alloc_block(0x7F20, 0x7F3F, handler_io_unimplemented);	// XBUS1 (not implemented)
+    alloc_block(0x7F40, 0x7F5F, handler_io_unimplemented);	// XBUS2 (not implemented)
+    alloc_block(0x7F60, 0x7F7F, handler_io_unimplemented);	// XBUS3 (not implemented)
+    alloc_block(0x7F80, 0x7F9F, handler_acia);	// ACIA
+    alloc_block(0x7FA0, 0x7FBF, handler_pia);		// PIA
+    alloc_block(0x7FC0, 0x7FDF, handler_via1);	// VIA
+    alloc_block(0x7FE0, 0x7FFF, handler_via2);	// USB VIA
+    alloc_block(0x0, 0x7EFF, handler_ram);		// RAM
+    alloc_block(0x8000, 0xFFFF, handler_flash);	// FLASH
+    print_block_list();
+    write_byte(0x0100, 0x31);
+    write_byte(0x7FC0, 0x22);
+ 
     load_srec("allops_m0x0.s19");
+  
     op_mode = CPU_MODE_M0X0;
     printf("**** M0X0 sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
@@ -509,24 +632,5 @@ int main(void)
     disasm(start_address, end_address);
     
     exit(0);
-    init_mem();
-    print_block_list();
-    alloc_block(0x2A00, 0x2A04, 0x0);
-    alloc_block(0x0200, 0x03FF, 0x3);
-    alloc_block(0x8000, 0xFFFF, 0x7);
-    print_block_list();
-    del_block_containing(0x8009);
-    print_block_list();
-    del_block_containing(0x204);
-    print_block_list();
-    del_block_containing(0x2A04);
-    print_block_list();
-    exit(0);
-
-    for (i = 0; i < 256; i++) {
-        printf("0x%02X:%s\t0x%02X,%d\n", i, opcode_table[i].ops, 
-			opcode_table[i].sizeinfo,
-			opcode_table[i].adm);
-    }
 }
 
