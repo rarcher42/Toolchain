@@ -433,9 +433,9 @@ int disasm_one(uint32_t my_addr, char *outs)
         break;
 
     case OP_2OPS:
-	uint8_t a = from_hex(&oldmem[pc+1], 1);
-	uint8_t b = from_hex(&oldmem[pc+2], 1);
-	sprintf(param, "%02X, %02X ", a, b);
+	uint8_t a = from_hex(&oldmem[my_addr + 1], 1);
+	uint8_t b = from_hex(&oldmem[my_addr + 2], 1);
+	sprintf(param, "%02X,%02X ", a, b);
         break;
     default:
         printf("\nUNKNOWN addressing mode %d: aborting!\n", (int) addr_mode);
