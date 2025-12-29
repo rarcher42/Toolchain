@@ -279,7 +279,8 @@ uint8_t get_oplen (uint8_t op)
     uint8_t sizeinfo;
     uint8_t oplen;
 
-    sizeinfo = opcode_table[op].sizeinfo;
+	sizeinfo = opcode_table[op].sizeinfo;
+ 
     if ((op_mode == CPU_MODE_NMOS_6502) && (sizeinfo & NOT_6502)) { 
         printf("Unimplemented NMOS 6502 opcode $%02X\n", op);
 	return 0;    // Not implemented!
@@ -289,15 +290,17 @@ uint8_t get_oplen (uint8_t op)
 	return 0;    // Not implemented!
     }
     oplen = sizeinfo & 0x7;  // Extract length bits
-    if ((op_mode < 4) && (sizeinfo & M_ADDS)) {
+   
+    if (sizeinfo & M_ADDS) {
 	// Instruction:  add 1 byte if M flag is set
-        if ((op_mode & 2) == 0) {
-	    ++oplen;
+        if ((op_mode == CPU_MODE_M0X0) || (op_mode == CPU_MODE_M0X1)) {
+	        ++oplen;
+		}
 	}
-    } else if ((op_mode < 4) && (sizeinfo & M_ADDS))  {
-        if ((op_mode & 1) == 0) {
-	    ++oplen;
-	}
+    if (sizeinfo & X_ADDS)  {
+        if ((op_mode == CPU_MODE_M0X0) || (op_mode == CPU_MODE_M1X0)) {
+	        ++oplen;
+		}
     }
     return oplen;
 }
@@ -476,32 +479,32 @@ int main(void)
     }
     
     load_srec("allops_m0x0.s19");
-    op_mode = 0;
+    op_mode = CPU_MODE_M0X0;
     printf("**** M0X0 sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
     load_srec("allops_m0x1.s19");
-    op_mode = 1;
+    op_mode = CPU_MODE_M0X1;
     printf("****  M0X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
     load_srec("allops_m1x0.s19");
-    op_mode = 2;
+    op_mode = CPU_MODE_M1X0;
     printf("****  M1X0  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
   
 	load_srec("allops_m1x1.s19");
-    op_mode = 3;
+    op_mode = CPU_MODE_M1X1;
     printf("****  M1X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
     load_srec("allops_65c02.s19");
-    op_mode = 4;
+    op_mode = CPU_MODE_CMOS_6502;
     printf("****  65c02  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
     load_srec("allops_6502.s19");
-    op_mode = 5;
+    op_mode = CPU_MODE_NMOS_6502;
     printf("****  6502  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
