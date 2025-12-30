@@ -1,0 +1,130 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "vm.h"
+
+
+
+
+mem_block_descriptor_t *mem_list_head;
+
+void init_mem(void)
+{
+    mem_list_head = NULL;
+}
+
+int alloc_block(uint32_t saddr, uint32_t eaddr,
+    int (*handler)(void *self, uint32_t addr, uint8_t data, uint8_t wr))
+{
+    uint32_t bl;
+    uint8_t *mp;	// Allocated memory block
+    mem_block_descriptor_t *mbd;
+
+    if (eaddr < saddr) {
+        bl = saddr;
+	saddr = eaddr;
+	eaddr = bl;
+    }
+    bl = eaddr - saddr + 1;
+    mp = malloc(bl);
+    if (mp == NULL)
+        return -1;
+    mbd = malloc(sizeof(mem_block_descriptor_t));
+    if (mbd == NULL) {
+        free(mp);
+        return -1;
+    }
+    mbd->mem = mp;
+    mbd->saddr = saddr;
+    mbd->eaddr = eaddr;
+    mbd->implementation = handler;
+    mbd->next = mem_list_head;
+    mem_list_head = mbd;
+    return 0;    
+}
+
+int del_block_containing(uint32_t ma)
+{
+    mem_block_descriptor_t *mbp;
+    mem_block_descriptor_t *prev;
+
+    mbp = mem_list_head;
+    prev = NULL;
+    while (mbp != NULL) {
+        if ((ma >= mbp->saddr) && (ma <= mbp->eaddr)) {
+	    printf("Found it!  0x%08X-0x%08X", mbp->saddr, mbp->eaddr);
+	    if (prev == NULL) {
+                // Delete first item on the list
+			mem_list_head = mbp->next;
+			free(mbp->mem);		// Free actual memory
+			free(mbp);		// Free descriptor
+	    } else {
+			prev->next = mbp->next;	// Link across deleted element
+		free(mbp->mem);
+		free(mbp);
+	    }
+	}
+	prev = mbp;
+	mbp = mbp->next;
+    }
+    return 0;
+}
+
+
+mem_block_descriptor_t *find_block_descriptor(uint32_t ma)
+{
+
+    mem_block_descriptor_t *mbp;
+
+    mbp = mem_list_head;
+    while (mbp != NULL) {
+	if ((ma >= mbp->saddr) && (ma <= mbp->eaddr)) {
+	    return mbp;
+        }
+        mbp = mbp->next;
+    }
+    return (mem_block_descriptor_t *) NULL;
+}
+
+
+void print_block_list(void)
+{
+    mem_block_descriptor_t *mbp;
+
+    mbp = mem_list_head;
+    while (mbp != NULL) {
+		printf("====================================\n");
+		printf("Start address: $%08X\n", mbp->saddr);
+		printf("End   address: $%08X\n", mbp->eaddr);
+		printf("Next         : %p\ni\n", mbp->next);	
+        mbp = mbp->next;
+    }
+}
+
+int write_byte(uint32_t addr, uint8_t data)
+{
+	mem_block_descriptor_t *bdp;
+	// Implement caching!  For now, just make it work
+	bdp = find_block_descriptor(addr);
+	if (bdp == NULL) {
+		printf("LOCATION %08X not found!\n", addr);
+		return -1;
+	}
+	return bdp->implementation((void *) bdp, addr, data, 1);	// Do write via handler
+}
+
+int read_byte(uint32_t addr)
+{
+	mem_block_descriptor_t *bdp;
+	uint8_t val;
+	// Implement caching!  For now, just make it work
+	bdp = find_block_descriptor(addr);
+	if (bdp == NULL) {
+		printf("LOCATION %08X not found!\n", addr);
+		return -1;
+	}
+	val = bdp->implementation((void *) bdp, addr, 0, 0);	// Do read via handler
+	return val;
+}
+
+
