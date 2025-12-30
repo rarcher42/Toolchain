@@ -287,7 +287,7 @@ op_tbl opcode_table[] = {
 {"JSR", (LEN3 | NOT_65C02 | NOT_6502),  OP_ABS_X_IND},    //$FC
 {"SBC", LEN3,   OP_ABS_X},     //$FD
 {"INC", LEN3,   OP_ABS_X},     //$FE
-{"SBC", LEN4,   OP_ABS_X_L}      //$FF
+{"SBC", LEN4 | NOT_65C02 | NOT_6502,   OP_ABS_X_L}      //$FF
 };
 
 
