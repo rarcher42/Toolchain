@@ -22,3 +22,14 @@ extern mem_block_descriptor_t *find_block_descriptor(uint32_t ma);
 extern void print_block_list(void);
 extern int write_byte(uint32_t addr, uint8_t data);
 extern int read_byte(uint32_t addr);
+
+
+extern int handler_via1(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_via2(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_acia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_pia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_io_unimplemented(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_null(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_ram(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_rom(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
+extern int handler_flash(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);

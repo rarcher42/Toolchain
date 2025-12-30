@@ -6,22 +6,8 @@
 #include "vm.h"
 #include "srec.h"
 
-// Ugly legacy stuff - replace with structured memory with attributes
-//
-uint32_t start_address;	// Lowest address loaded by load_srec()
-uint32_t end_address;	// Highest address loaded by load_srec()
-uint32_t pc;
-    // mode = 0x0 : M=0 X=0 E=0 
-    // mode = 0x1 : M=0 X=1 E=0
-    // mode = 0x2 : M=1 X=0 E=0
-    // mode = 0x3 : M=1 X=1 E=0 or Emulation mode (no diff in disasm)
-    // mode = 0x4 : Real 65c02 (no 65c816 at all)
-    // mode = 0x5 : Real NMOS 6502
-    // mode = 0xFF: not yet supported, E mode 65c816 (same as mode 3 for disasm)
-uint8_t op_mode;
 
-// end legacy stuff
-
+cpu_op_mode_t op_mode;
 
 address_mode_t get_addr_mode (uint8_t op)
 {
@@ -223,133 +209,52 @@ void disasm (uint32_t sa, uint32_t ea)
     } 
 }
 
-int handler_via1 (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	printf("called handler_via1($%08X, $%02X. wr=%d)\n", addr, data, wr);
-	return 0;
-}
-
-int handler_via2 (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	printf("called handler_via2($%08X, $%02X), wr=%d\n", addr, data, wr);
-	return 0;
-}
-
-int handler_acia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	printf("called handler_acia($%08X, $%02X), wr=%d\n", addr, data, wr);
-	return 0;
-}
-
-int handler_pia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	printf("called handler_pia($%08X, $%02X), wr=%d\n", addr, data, wr);
-	return 0;
-}
-
-int handler_io_unimplemented(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	printf("called handler_io_unimplemented($%08X, $%02X)\n, wr=%d", addr, data, wr);
-	return 0;
-}
-
-
-int handler_null(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	printf("called handler_null($%08X, $%02X), wr=%d\n", addr, data, wr);
-	return 0;
-}
-
-int handler_ram(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	mem_block_descriptor_t *p;
-	
-	p = (mem_block_descriptor_t *) bdp;
-	if (p == NULL) {
-		printf("\nCannot locate RAM descriptor: R/W operation failed!\n");
-		return -1;
-	}
-	if (wr) {
-		//cprintf("Writing $%02X to RAM location %08X\n", data, addr);
-		p->mem[addr - p->saddr] = data;
-		return 0;
-	} else {
-		// printf("Reading from RAM location %08X\n", addr);
-		return p->mem[addr - p->saddr];
-	}
-}
-
-int handler_rom(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-
-	mem_block_descriptor_t *p;
-	
-	p = (mem_block_descriptor_t *) bdp;
-	if (p == NULL) {
-		printf("\nCannot locate ROM descriptor: R/W operation failed!\n");
-		return -1;
-	}
-	if (wr) {
-		printf("Error:  cannot write to ROM location $%08X\n", addr);
-		return 0;
-	} else {
-		printf("Reading from ROM location $%08X\n", addr);
-		return p->mem[addr - p->saddr];
-	}
-}
-
-
-int handler_flash(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
-{
-	return 0;
-}
-
-
 
 int main(void)
 {	
+	uint32_t start_address;
+	uint32_t end_address;
+	
+	
     init_mem();
     alloc_block(0x7F00, 0x7F1F, handler_io_unimplemented);	// XBUS0 (not implmemented)
     alloc_block(0x7F20, 0x7F3F, handler_io_unimplemented);	// XBUS1 (not implemented)
     alloc_block(0x7F40, 0x7F5F, handler_io_unimplemented);	// XBUS2 (not implemented)
     alloc_block(0x7F60, 0x7F7F, handler_io_unimplemented);	// XBUS3 (not implemented)
     alloc_block(0x7F80, 0x7F9F, handler_acia);	// ACIA
-    alloc_block(0x7FA0, 0x7FBF, handler_pia);		// PIA
+    alloc_block(0x7FA0, 0x7FBF, handler_pia);	// PIA
     alloc_block(0x7FC0, 0x7FDF, handler_via1);	// VIA
     alloc_block(0x7FE0, 0x7FFF, handler_via2);	// USB VIA
     alloc_block(0x0, 0x7EFF, handler_ram);		// RAM
     alloc_block(0x8000, 0xFFFF, handler_flash);	// FLASH
     print_block_list();
-    write_byte(0x0100, 0x31);
-    write_byte(0x7FC0, 0x22);
  
-    load_srec("allops_m0x0.s19");
-  
+    load_srec("allops_m0x0.s19", &start_address, &end_address);
     op_mode = CPU_MODE_M0X0;
     printf("**** M0X0 sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
-    load_srec("allops_m0x1.s19");
+    load_srec("allops_m0x1.s19", &start_address, &end_address);
     op_mode = CPU_MODE_M0X1;
     printf("****  M0X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
-    load_srec("allops_m1x0.s19");
+    load_srec("allops_m1x0.s19", &start_address, &end_address);
     op_mode = CPU_MODE_M1X0;
     printf("****  M1X0  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
   
-	load_srec("allops_m1x1.s19");
+	load_srec("allops_m1x1.s19", &start_address, &end_address);
     op_mode = CPU_MODE_M1X1;
     printf("****  M1X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
-    load_srec("allops_65c02.s19");
+    load_srec("allops_65c02.s19", &start_address, &end_address);
     op_mode = CPU_MODE_CMOS_6502;
     printf("****  65c02  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
-    load_srec("allops_6502.s19");
+    load_srec("allops_6502.s19", &start_address, &end_address);
     op_mode = CPU_MODE_NMOS_6502;
     printf("****  6502  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);

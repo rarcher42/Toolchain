@@ -51,14 +51,14 @@ void dump_hex(uint32_t sa, uint32_t ea)
     for (addr = sa; addr <= ea; addr++) {
         if ((addr & 0xF) == 0) {
             printf("\n%08X: ", addr);
-	} 
-	printf("%02X ", read_byte(addr));
+    } 
+    printf("%02X ", read_byte(addr));
     }
     printf("\n");
 }
 
 
-int load_srec(char *fn)
+int load_srec(char *fn, uint32_t *start_address, uint32_t *end_address)
 {
     int j;
     FILE *fp;
@@ -68,82 +68,82 @@ int load_srec(char *fn)
     uint8_t nbytes;
     uint8_t b;
 
-    start_address = 0xFFFFFFFF;
-    end_address = 0;
+    *start_address = 0xFFFFFFFF;
+    *end_address = 0;
     addr = 0;
     fp = fopen(fn, "r");
     if (fp != NULL) {
         while (fgets(nextline, MAX_LINE, fp)) {
-		    puts(nextline);
-	    if (nextline[0] != 'S') {
+            puts(nextline);
+        if (nextline[0] != 'S') {
                 return -1;
-	    }
-	    rectype = nextline[1];
-	    switch (rectype) {
+        }
+        rectype = nextline[1];
+        switch (rectype) {
             case '0':
-		break;
-	    case '1':
-			nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 3;
-			addr = from_hex_str((uint8_t *) &nextline[4], 4);
-			j = 8;
-			while (nbytes-- > 0) {
-				b = from_hex_str((uint8_t *) &nextline[j], 2);
-				write_byte(addr, b);
-				if (addr < start_address)
-	               start_address = addr; 
-				if (addr > end_address)
-					end_address = addr;
-				j += 2;	
-				addr += 1;	    
-			}
         break;
-	    case '2':
-			nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 4;
+        case '1':
+            nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 3;
+            addr = from_hex_str((uint8_t *) &nextline[4], 4);
+            j = 8;
+            while (nbytes-- > 0) {
+                b = from_hex_str((uint8_t *) &nextline[j], 2);
+                write_byte(addr, b);
+                if (addr < *start_address)
+                   *start_address = addr; 
+                if (addr > *end_address)
+                    *end_address = addr;
+                j += 2; 
+                addr += 1;      
+            }
+        break;
+        case '2':
+            nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 4;
             addr = from_hex_str((uint8_t *) &nextline[4], 6);
             j = 10;
             while (nbytes-- > 0) {
-				b = from_hex_str((uint8_t *) &nextline[j], 2);
+                b = from_hex_str((uint8_t *) &nextline[j], 2);
                     write_byte(addr, b);
-                    if (addr < start_address)
-                       start_address = addr;
-                    if (addr > end_address)
-                        end_address = addr;
+                    if (addr < *start_address)
+                       *start_address = addr;
+                    if (addr > *end_address)
+                        *end_address = addr;
                     j += 2;
                     addr += 1;
                 }
-		break;
+        break;
         case '3':
-			nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 5;
+            nbytes = from_hex_str((uint8_t *) &nextline[2], 2) - 5;
             addr = from_hex_str((uint8_t *) &nextline[4], 8);
                 j = 12;
                 while (nbytes-- > 0) {
                     b = from_hex_str((uint8_t *) &nextline[j], 2);
                     write_byte(addr, b);
-					if (addr < start_address)
-                       start_address = addr;
-                    if (addr > end_address)
-                        end_address = addr;
+                    if (addr < *start_address)
+                       *start_address = addr;
+                    if (addr > *end_address)
+                        *end_address = addr;
                     j += 2;
                     addr += 1;
                 }
-		break;
-	    case '5':
-		break;
-	    case '7':
-		break;
-	    case '8':
-		break;
-	    case '9':
-	        break;
-	    default:
-	        printf("UNKNOWN Record type -  discarding!");
-		break;	
-	    } 
-	}
+        break;
+        case '5':
+        break;
+        case '7':
+        break;
+        case '8':
+        break;
+        case '9':
+            break;
+        default:
+            printf("UNKNOWN Record type -  discarding!");
+        break;  
+        } 
+    }
 
     } else {
         return -1;
     }
-    dump_hex(start_address, end_address);
+    dump_hex(*start_address, *end_address);
     return 0;
 }
