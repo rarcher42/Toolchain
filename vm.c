@@ -99,7 +99,7 @@ void print_block_list(void)
 	}
 }
 
-int write_byte(uint32_t addr, uint8_t data)
+int cpu_write(uint32_t addr, uint8_t data)
 {
 	mem_block_descriptor_t *bdp;
 	// Implement caching!  For now, just make it work
@@ -111,7 +111,7 @@ int write_byte(uint32_t addr, uint8_t data)
 	return bdp->implementation((void *) bdp, addr, data, 1);    // Do write via handler
 }
 
-int read_byte(uint32_t addr)
+int cpu_read(uint32_t addr)
 {
 	mem_block_descriptor_t *bdp;
 	uint8_t val;

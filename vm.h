@@ -20,8 +20,8 @@ extern int alloc_block(uint32_t saddr, uint32_t eaddr,
 extern int del_block_containing(uint32_t ma);
 extern mem_block_descriptor_t *find_block_descriptor(uint32_t ma);
 extern void print_block_list(void);
-extern int write_byte(uint32_t addr, uint8_t data);
-extern int read_byte(uint32_t addr);
+extern int cpu_write(uint32_t addr, uint8_t data);
+extern int cpu_read(uint32_t addr);
 
 
 extern int handler_via1(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);

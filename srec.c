@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "optbl_65816.h"
 #include "disasm.h"
 #include "vm.h"
 
@@ -27,7 +28,7 @@ uint32_t from_hex_str(uint8_t *s, uint8_t n)
     int i;
 
     for (i = 0; i < n; i++) {
-        sum = 16*sum + hex_val(s[i]);
+        sum = (sum << 4) + hex_val(s[i]);
     }
     return sum;
 }
@@ -39,7 +40,7 @@ uint32_t from_hex(uint32_t addr, uint8_t n)
  
     for (i = n-1; i >= 0; --i) {
         // printf("_%02X_", numseq[i]);
-        sum = 256*sum + read_byte(addr+i);
+        sum = (sum << 8) + cpu_read(addr+i);
     }
     return sum;
 }
@@ -52,7 +53,7 @@ void dump_hex(uint32_t sa, uint32_t ea)
         if ((addr & 0xF) == 0) {
             printf("\n%08X: ", addr);
     } 
-    printf("%02X ", read_byte(addr));
+    printf("%02X ", cpu_read(addr));
     }
     printf("\n");
 }
@@ -88,7 +89,7 @@ int load_srec(char *fn, uint32_t *start_address, uint32_t *end_address)
             j = 8;
             while (nbytes-- > 0) {
                 b = from_hex_str((uint8_t *) &nextline[j], 2);
-                write_byte(addr, b);
+                cpu_write(addr, b);
                 if (addr < *start_address)
                    *start_address = addr; 
                 if (addr > *end_address)
@@ -103,7 +104,7 @@ int load_srec(char *fn, uint32_t *start_address, uint32_t *end_address)
             j = 10;
             while (nbytes-- > 0) {
                 b = from_hex_str((uint8_t *) &nextline[j], 2);
-                    write_byte(addr, b);
+                    cpu_write(addr, b);
                     if (addr < *start_address)
                        *start_address = addr;
                     if (addr > *end_address)
@@ -118,7 +119,7 @@ int load_srec(char *fn, uint32_t *start_address, uint32_t *end_address)
                 j = 12;
                 while (nbytes-- > 0) {
                     b = from_hex_str((uint8_t *) &nextline[j], 2);
-                    write_byte(addr, b);
+                    cpu_write(addr, b);
                     if (addr < *start_address)
                        *start_address = addr;
                     if (addr > *end_address)

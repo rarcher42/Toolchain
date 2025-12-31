@@ -9,6 +9,11 @@
 
 cpu_op_mode_t op_mode;
 
+void set_op_mode (cpu_op_mode_t mode)
+{
+	op_mode = mode;
+}
+
 address_mode_t get_addr_mode (uint8_t op)
 {
     return opcode_table[op].adm;
@@ -55,7 +60,7 @@ int disasm_one(uint32_t my_addr, char *outs)
 
     outs[0] = (char) 0;
     param[0] = (char) 0;
-    op = read_byte(my_addr);
+    op = cpu_read(my_addr);
     oplen = get_oplen(op);
     addr_mode = get_addr_mode(op);
     val = 0;
@@ -188,10 +193,10 @@ void disasm (uint32_t sa, uint32_t ea)
     lpc = sa;
     while (lpc <= ea) {
 	printf("%06X: ", lpc);
-	op_len = get_oplen(read_byte(lpc));
+	op_len = get_oplen(cpu_read(lpc));
         for (i = 0; i < 4; i++) {
             if (i < op_len) {
-                printf("%02X ", read_byte(lpc+i));
+                printf("%02X ", cpu_read(lpc+i));
 	    } else {
 	        printf("   ");
 	    }
@@ -209,56 +214,4 @@ void disasm (uint32_t sa, uint32_t ea)
     } 
 }
 
-
-int main(void)
-{	
-	uint32_t start_address;
-	uint32_t end_address;
-	
-	
-    init_mem();
-    alloc_block(0x7F00, 0x7F1F, handler_io_unimplemented);	// XBUS0 (not implmemented)
-    alloc_block(0x7F20, 0x7F3F, handler_io_unimplemented);	// XBUS1 (not implemented)
-    alloc_block(0x7F40, 0x7F5F, handler_io_unimplemented);	// XBUS2 (not implemented)
-    alloc_block(0x7F60, 0x7F7F, handler_io_unimplemented);	// XBUS3 (not implemented)
-    alloc_block(0x7F80, 0x7F9F, handler_acia);	// ACIA
-    alloc_block(0x7FA0, 0x7FBF, handler_pia);	// PIA
-    alloc_block(0x7FC0, 0x7FDF, handler_via1);	// VIA
-    alloc_block(0x7FE0, 0x7FFF, handler_via2);	// USB VIA
-    alloc_block(0x0, 0x7EFF, handler_ram);		// RAM
-    alloc_block(0x8000, 0xFFFF, handler_flash);	// FLASH
-    print_block_list();
- 
-    load_srec("allops_m0x0.s19", &start_address, &end_address);
-    op_mode = CPU_MODE_M0X0;
-    printf("**** M0X0 sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_m0x1.s19", &start_address, &end_address);
-    op_mode = CPU_MODE_M0X1;
-    printf("****  M0X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_m1x0.s19", &start_address, &end_address);
-    op_mode = CPU_MODE_M1X0;
-    printf("****  M1X0  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-  
-	load_srec("allops_m1x1.s19", &start_address, &end_address);
-    op_mode = CPU_MODE_M1X1;
-    printf("****  M1X1  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_65c02.s19", &start_address, &end_address);
-    op_mode = CPU_MODE_CMOS_6502;
-    printf("****  65c02  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_6502.s19", &start_address, &end_address);
-    op_mode = CPU_MODE_NMOS_6502;
-    printf("****  6502  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
-    exit(0);
-}
 
