@@ -441,14 +441,6 @@ opcode_table = (
 ("SBC",  OP_ABS_X_L,    0x04)       # SBC $123456,X    ;$FF
 )
 
-# A mode parameter is needed to tell disassembler how M and X flags are set, 
-# whether we're in emulation mode, and flag unimplemented instructions (as length=0)
-CPU_MODE_M0X0   =   0
-CPU_MODE_M0X1   =   1
-CPU_MODE_M1X0   =   2
-CPU_MODE_M1X1   =   3
-CPU_MODE_CMOS_6502 = 4  # A real 65c02 chip not 65c816
-CPU_MODE_NMOS_6502 = 5  # A real NMOS 6502
 
 def get_mnemonic(opcode):
     return opcode_table[opcode][0]

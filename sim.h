@@ -26,13 +26,18 @@ typedef struct {
 } cpu_state_t;
 
 
-const uint8_t FLAG_N = (1 << 7);
-const uint8_t FLAG_V = (1 << 6);
-const uint8_t FLAG_M = (1 << 5);
-const uint8_t FLAG_X = (1 << 4);
-const uint8_t FLAG_D = (1 << 3);
-const uint8_t FLAG_I = (1 << 2);
-const uint8_t FLAG_Z = (1 << 1);
-const uint8_t FLAG_C = 0x01;
 
-
+extern cpu_state_t cpu_state;
+extern void SET_FLAG (uint8_t fset_mask);
+extern void CLR_FLAG (uint8_t fres_mask);
+extern uint8_t GET_FLAGS(void);
+extern uint8_t GET_FLAG(uint8_t flag);
+extern uint8_t get_cpu_type(void);
+extern const uint8_t N_FLAG;
+extern const uint8_t V_FLAG;
+extern const uint8_t M_FLAG;
+extern const uint8_t X_FLAG;
+extern const uint8_t D_FLAG;
+extern const uint8_t I_FLAG;
+extern const uint8_t Z_FLAG;
+extern const uint8_t C_FLAG;

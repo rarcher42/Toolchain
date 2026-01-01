@@ -7,48 +7,6 @@
 #include "srec.h"
 
 
-cpu_op_mode_t op_mode;
-
-void set_op_mode (cpu_op_mode_t mode)
-{
-	op_mode = mode;
-}
-
-address_mode_t get_addr_mode (uint8_t op)
-{
-    return opcode_table[op].adm;
-}
-
-uint8_t get_oplen (uint8_t op) 
-{
-    uint8_t sizeinfo;
-    uint8_t oplen;
-
-	sizeinfo = opcode_table[op].sizeinfo;
- 
-    if ((op_mode == CPU_MODE_NMOS_6502) && (sizeinfo & NOT_6502)) { 
-        printf("Unimplemented NMOS 6502 opcode $%02X\n", op);
-	return 0;    // Not implemented!
-    }
-    if ((op_mode == CPU_MODE_CMOS_6502) && (sizeinfo & NOT_65C02)) {
-        printf("Unimplemented CMOS 65c02 opcode $%02X\n", op);
-	return 0;    // Not implemented!
-    }
-    oplen = sizeinfo & 0x7;  // Extract length bits
-   
-    if (sizeinfo & M_ADDS) {
-	// Instruction:  add 1 byte if M flag is set
-        if ((op_mode == CPU_MODE_M0X0) || (op_mode == CPU_MODE_M0X1)) {
-	        ++oplen;
-		}
-	}
-    if (sizeinfo & X_ADDS)  {
-        if ((op_mode == CPU_MODE_M0X0) || (op_mode == CPU_MODE_M1X0)) {
-	        ++oplen;
-		}
-    }
-    return oplen;
-}
 
 int disasm_one(uint32_t my_addr, char *outs)
 {
@@ -80,7 +38,7 @@ int disasm_one(uint32_t my_addr, char *outs)
     case OP_IMM:
         if (oplen == 3) 
             sprintf(param, "#$%04X ", val);
-	else
+		else
             sprintf(param, "#$%02X ", val);
 	break;
 
