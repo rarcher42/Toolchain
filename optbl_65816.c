@@ -278,6 +278,11 @@ op_tbl opcode_table[] = {
 };
 
 
+char *get_mnemonic (uint8_t op)
+{
+    return opcode_table[op].ops;
+}
+
 address_mode_t get_addr_mode (uint8_t op)
 {
     return opcode_table[op].adm;

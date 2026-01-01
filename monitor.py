@@ -3,7 +3,6 @@ import time
 import sys
 import serial
 
-
 ''' f
 01 READBYTES:       01 SAL SAH SAB BCL BCH NLO N    (read N+1 bytes 1-256 for N=0..255)
     returns n+1 bytes

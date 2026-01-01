@@ -20,14 +20,14 @@ int disasm_one(uint32_t my_addr, char *outs)
     outs[0] = (char) 0;
     param[0] = (char) 0;
     
-    op = meta_cpu_state.ir[0];
-    oplen = meta_cpu_state.oplen;
-    addr_mode = meta_cpu_state.addr_mode;
+    op = get_ir_opcode();
+    oplen = get_ir_oplen();
+    addr_mode = get_ir_addr_mode();
     val = 0;
     if (oplen > 1) {
         val = from_hex(my_addr+1, oplen-1);
     }   
-    sprintf(outs, "%s ", opcode_table[op].ops);
+    sprintf(outs, "%s ", get_mnemonic(op));
 
     switch((int) addr_mode) {
     case OP_NONE:
@@ -157,7 +157,7 @@ void disasm (uint32_t sa, uint32_t ea)
     printf("%06X: ", lpc);
     cpu_fetch(lpc);     // We'll probably move this to sim.c once all is validated
     
-    op_len = meta_cpu_state.oplen;
+    op_len = get_ir_oplen();
         for (i = 0; i < 4; i++) {
             if (i < op_len) {
                 printf("%02X ", cpu_read(lpc+i));
