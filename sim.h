@@ -33,6 +33,7 @@ extern void CLR_FLAG (uint8_t fres_mask);
 extern uint8_t GET_FLAGS(void);
 extern uint8_t GET_FLAG(uint8_t flag);
 extern uint8_t get_cpu_type(void);
+extern uint32_t calc_EA(uint8_t op);
 extern const uint8_t N_FLAG;
 extern const uint8_t V_FLAG;
 extern const uint8_t M_FLAG;

@@ -61,7 +61,7 @@ uint8_t GET_FLAG(uint8_t flag)
 	return 0;
 }
 
-void set_emu(BOOL emu_mode)
+void SET_EMU(BOOL emu_mode)
 {
     if (emu_mode) {
         cpu_state.em = 0x1;
@@ -70,7 +70,7 @@ void set_emu(BOOL emu_mode)
     }
 }
 
-uint8_t get_emu(void)
+uint8_t GET_EMU(void)
 {
     return cpu_state.em;
 }
@@ -79,19 +79,151 @@ void init_cpu(void)
 {
     uint16_t new_pc;
     
-    set_emu(TRUE);      // Comes out of reset in EMU mode
+    SET_EMU(FALSE);      	// FUBAR for testing disasm only, should be TRUE
+    set_cpu_type(CPU_65816);       // Not 6502, 65c02 at this time
     cpu_state.A.AX = 0;
     cpu_state.X = 0;
     cpu_state.Y = 0;
-    cpu_state.SP = 0x01FF;  // Not really!
+    cpu_state.SP = 0x7EFF;  // Not really!
     cpu_state.DBR = 0;
     cpu_state.PBR = 0;
     cpu_state.DPR = 0x0000; // Probably
     new_pc = (cpu_read(VEC_RESET+1) & 0xFF) << 8;
     new_pc |= (cpu_read(VEC_RESET) & 0xFF);
     cpu_state.PC = new_pc;
-    set_cpu_type(CPU_65816);       // Not 6502, 65c02 at this time
 }
+
+uint32_t calc_EA(uint8_t op)
+{
+	address_mode_t addr_mode;
+	uint8_t oplen;
+	uint16_t ea;
+	
+	addr_mode = get_addr_mode(op);
+	oplen = get_oplen(op);
+    switch((int) addr_mode) {
+    case OP_NONE:
+		printf("OP_NONE(null)");
+        break;
+        
+    case OP_A:
+		if (GET_FLAG(M_FLAG)) {
+			printf("OP_A(%02X)", cpu_state.A.AL);
+		} else {
+			printf("OP_A(%04X)", cpu_state.A.AX);
+		}
+        break;
+
+    case OP_IMM:
+        if (oplen == 3) 
+			;
+		else
+			;
+        printf("OP_IMM");
+		break;
+
+    case OP_ABS:
+        printf("OP_ABS");
+        break;
+
+    case OP_ZP:
+		printf("OP_ZP");
+        break;
+    
+    case OP_ABS_L:
+		printf("OP_ABS_L");
+        break;
+    
+    case OP_REL:
+        printf("OP_REL");
+		break;
+    
+    case OP_REL_L:
+        printf("OP_REL_L");
+		break;
+	
+    case OP_ZP_XI:
+		printf("OP_ZX_XI");
+        break;
+
+    case OP_ZP_IY:
+		printf("OP_ZP_IY");
+        break;
+
+    case OP_ZP_IND_L:
+		printf("OP_ZP_IND_L");
+        break;
+
+    case OP_ZP_IND:
+		printf("OP_ZP_IND");
+        break;
+
+    case OP_ZP_IY_L:
+		printf("OP_ZP_IY_L");
+        break;
+
+    case OP_ZP_X:
+		printf("OP_ZP_X");
+        break;
+
+    case OP_ZP_Y:
+		printf("OP_ZP_Y");
+        break;
+
+    case OP_ABS_X:
+		printf("OP_ABS_X");
+        break;
+
+    case OP_ABS_X_L:
+		printf("OP_ABS_X_L");
+        break;
+
+    case OP_ABS_Y:
+		printf("OP_ABS_Y");
+		break;
+
+    case OP_SR:
+		printf("OP_SR");
+        break; 
+
+    case OP_SR_IY:
+		printf("OP_SR_IY");
+        break;
+
+    case OP_ABS_IND:
+		printf("OP_ABS_IND");
+        break; 
+    
+    case OP_ABS_IND_L:
+		printf("OP_ABS_IND_L");
+        break;
+
+    case OP_ABS_X_IND:
+		printf("OP_ABS_X_IND");
+        break;
+
+	case OP_STACK:
+		if ((cpu_type == CPU_65c02) || (cpu_type == CPU_6502) ||
+			(cpu_state.em == 1)) {
+			ea = (cpu_state.SP & 0x00FF) | 0x0100;
+			printf("OP_STACK(%04X)", ea);
+		} else {
+			printf("OP_STACK(%04X)", cpu_state.SP);
+		}
+		break;
+		
+		
+    case OP_2OPS:
+		printf("OP_2OPS");
+        break;
+        
+    default:
+		printf("================ OP:  UNKNOWN!!!! ===========");
+		break;
+	} // switch address mode
+	return 0x00000000;	// Fill in later
+}
+
 
 int main(void)
 {   
@@ -113,6 +245,7 @@ int main(void)
     print_block_list();
 
     init_cpu(); 
+    cpu_state.A.AX = 0x6502;
     load_srec("allops_m0x0.s19", &start_address, &end_address);
     // set_op_mode(CPU_MODE_M0X0)
     CLR_FLAG(M_FLAG | X_FLAG);
