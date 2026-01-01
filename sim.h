@@ -27,7 +27,7 @@ typedef union {
     };
 } a_reg_t;
 
-// Actual CPU registers as seen by programmer
+// Actual CPU registers visible to programmer
 typedef struct {
     a_reg_t A;
     uint16_t X;
@@ -45,7 +45,7 @@ typedef struct {
 // CPU metadata here.  This is stuff that might be hardware in the CPU,
 // and in any event are very convenient to track CPU behavior with.
 typedef struct {
-
+	uint32_t cycle_counter;		// Cycle counter
     uint8_t oplen;              // Remember operation length
     address_mode_t  addr_mode;  // Remember address mode
     uint8_t ir[4];              // Virtual instruction
