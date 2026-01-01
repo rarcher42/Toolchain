@@ -75,7 +75,7 @@ int load_srec(char *fn, uint32_t *start_address, uint32_t *end_address)
     fp = fopen(fn, "r");
     if (fp != NULL) {
         while (fgets(nextline, MAX_LINE, fp)) {
-            puts(nextline);
+            printf("%s", nextline);
         if (nextline[0] != 'S') {
                 return -1;
         }

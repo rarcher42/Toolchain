@@ -92,9 +92,10 @@ void print_block_list(void)
 	mbp = mem_list_head;
 	while (mbp != NULL) {
 		printf("====================================\n");
+		printf("Self:        : *%p\n", 	mbp);
 		printf("Start address: $%08X\n", mbp->saddr);
 		printf("End   address: $%08X\n", mbp->eaddr);
-		printf("Next         : %p\ni\n", mbp->next);    
+		printf("Next         : *%p\n\n", mbp->next);    
 		mbp = mbp->next;
 	}
 }

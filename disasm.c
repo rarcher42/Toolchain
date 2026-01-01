@@ -135,7 +135,7 @@ int disasm_one(uint32_t my_addr, char *outs)
         break;
     default:
         printf("\nUNKNOWN addressing mode %d: aborting!\n", (int) addr_mode);
-	exit(0);
+		exit(0);
     } // switch addr_mode
     strcat(outs, param);
     return oplen;

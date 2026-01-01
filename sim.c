@@ -15,6 +15,10 @@ uint8_t cpu_type;       // 0 = 65816
                         // 1 = 6502
                         // 2 = 65c02
 
+const uint8_t CPU_65816 = 0;
+const uint8_t CPU_6502 = 1;
+const uint8_t CPU_65c02 = 2;
+
 const uint8_t N_FLAG = (1 << 7);
 const uint8_t V_FLAG = (1 << 6);
 const uint8_t M_FLAG = (1 << 5);
@@ -27,6 +31,11 @@ const uint8_t C_FLAG = 0x01;
 uint8_t get_cpu_type(void)
 {
 	return cpu_type;
+}
+
+void set_cpu_type(uint8_t ct)
+{
+	cpu_type = ct;
 }
 
 void SET_FLAG (uint8_t fset_mask)
@@ -81,7 +90,7 @@ void init_cpu(void)
     new_pc = (cpu_read(VEC_RESET+1) & 0xFF) << 8;
     new_pc |= (cpu_read(VEC_RESET) & 0xFF);
     cpu_state.PC = new_pc;
-    cpu_type = 0;       // Not 6502, 65c02 at this time
+    set_cpu_type(CPU_65816);       // Not 6502, 65c02 at this time
 }
 
 int main(void)
@@ -107,7 +116,7 @@ int main(void)
     load_srec("allops_m0x0.s19", &start_address, &end_address);
     // set_op_mode(CPU_MODE_M0X0)
     CLR_FLAG(M_FLAG | X_FLAG);
-    cpu_type = 0x0;
+    set_cpu_type(CPU_65816);
     printf("**** M%dX%d sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
     disasm(start_address, end_address);
     
@@ -115,7 +124,7 @@ int main(void)
     // set_op_mode(CPU_MODE_M0X1)
     CLR_FLAG(M_FLAG);
     SET_FLAG(X_FLAG);
-    cpu_type = 0;
+    set_cpu_type(CPU_65816);
     printf("****  M%dX%d  sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
     disasm(start_address, end_address);
     
@@ -123,7 +132,7 @@ int main(void)
     // set_op_mode(CPU_MODE_M1X0);
     SET_FLAG(M_FLAG);
     CLR_FLAG(X_FLAG);
-    cpu_type = 0;
+    set_cpu_type(CPU_65816);
     printf("****  M%dX%d  sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
     disasm(start_address, end_address);
   
@@ -131,7 +140,7 @@ int main(void)
     // set_op_mode(CPU_MODE_M1X1);
     SET_FLAG(M_FLAG);
     SET_FLAG(X_FLAG);
-    cpu_type = 0;
+    set_cpu_type(CPU_65816);
     printf("****  M%dX%d  sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
     disasm(start_address, end_address);
     
@@ -139,7 +148,7 @@ int main(void)
     // set_op_mode(CPU_MODE_CMOS_6502);
     SET_FLAG(M_FLAG);
     SET_FLAG(X_FLAG);
-    cpu_type = 2;
+    set_cpu_type(CPU_65c02);
     printf("****  65c02  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
@@ -147,7 +156,7 @@ int main(void)
     // set_op_mode(CPU_MODE_NMOS_6502);
     SET_FLAG(M_FLAG);
     SET_FLAG(X_FLAG);
-    cpu_type = 1;
+    set_cpu_type(CPU_6502);
     printf("****  6502  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
