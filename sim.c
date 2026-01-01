@@ -261,22 +261,15 @@ uint8_t get_ir_indexed(uint8_t index)
     return cpu_dynamic_metadata.ir[index];
 }
 
+
 int main(void)
 {   
     uint32_t start_address;
     uint32_t end_address;
     
-    init_mem();
-    alloc_block(0x7F00, 0x7F1F, handler_io_unimplemented);  // XBUS0 (not implmemented)
-    alloc_block(0x7F20, 0x7F3F, handler_io_unimplemented);  // XBUS1 (not implemented)
-    alloc_block(0x7F40, 0x7F5F, handler_io_unimplemented);  // XBUS2 (not implemented)
-    alloc_block(0x7F60, 0x7F7F, handler_io_unimplemented);  // XBUS3 (not implemented)
-    alloc_block(0x7F80, 0x7F9F, handler_acia);  // ACIA
-    alloc_block(0x7FA0, 0x7FBF, handler_pia);   // PIA
-    alloc_block(0x7FC0, 0x7FDF, handler_via1);  // VIA
-    alloc_block(0x7FE0, 0x7FFF, handler_via2);  // USB VIA
-    alloc_block(0x0, 0x7EFF, handler_ram);      // RAM
-    alloc_block(0x8000, 0xFFFF, handler_flash); // FLASH
+    init_vm();	// Create the infrastructure to support memory regions
+    alloc_target_system_memory();
+ 
     print_block_list();
 
     init_cpu(); 

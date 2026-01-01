@@ -13,10 +13,11 @@ typedef struct {
     void *next;
 } mem_block_descriptor_t;
 
-extern void init_mem(void);
-extern int alloc_block(uint32_t saddr, uint32_t eaddr,
-    int (*handler)(void *self, uint32_t addr, uint8_t data, 
-        uint8_t wr));
+extern void init_vm(void);
+extern void alloc_target_system_memory(void);
+//extern int alloc_block(uint32_t saddr, uint32_t eaddr,
+//    int (*handler)(void *self, uint32_t addr, uint8_t data, 
+//        uint8_t wr));
 extern int del_block_containing(uint32_t ma);
 extern mem_block_descriptor_t *find_block_descriptor(uint32_t ma);
 extern void print_block_list(void);

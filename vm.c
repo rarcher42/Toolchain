@@ -6,7 +6,7 @@
 
 mem_block_descriptor_t *mem_list_head;
 
-void init_mem(void)
+void init_vm(void)
 {
     mem_list_head = NULL;
 }
@@ -221,3 +221,17 @@ int handler_flash(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 }
 
 
+void alloc_target_system_memory(void) 
+{
+   // Set up the memory regions for the target system
+    alloc_block(0x7F00, 0x7F1F, handler_io_unimplemented);  // XBUS0 (not implmemented)
+    alloc_block(0x7F20, 0x7F3F, handler_io_unimplemented);  // XBUS1 (not implemented)
+    alloc_block(0x7F40, 0x7F5F, handler_io_unimplemented);  // XBUS2 (not implemented)
+    alloc_block(0x7F60, 0x7F7F, handler_io_unimplemented);  // XBUS3 (not implemented)
+    alloc_block(0x7F80, 0x7F9F, handler_acia);  // ACIA
+    alloc_block(0x7FA0, 0x7FBF, handler_pia);   // PIA
+    alloc_block(0x7FC0, 0x7FDF, handler_via1);  // VIA
+    alloc_block(0x7FE0, 0x7FFF, handler_via2);  // USB VIA
+    alloc_block(0x0, 0x7EFF, handler_ram);      // RAM
+    alloc_block(0x8000, 0xFFFF, handler_flash); // FLASH
+}
