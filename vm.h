@@ -23,7 +23,6 @@ extern void print_block_list(void);
 extern int cpu_write(uint32_t addr, uint8_t data);
 extern int cpu_read(uint32_t addr);
 
-
 extern int handler_via1(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
 extern int handler_via2(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);
 extern int handler_acia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr);

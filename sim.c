@@ -8,23 +8,9 @@
 #include "disasm.h"
 #include "sim.h"
 
-
-
 cpu_state_t cpu_state;
 cpu_dynamic_metadata_t cpu_dynamic_metadata;
 cpu_static_metadata_t cpu_static_metadata;
-const uint8_t CPU_65816 = 0;
-const uint8_t CPU_6502 = 1;
-const uint8_t CPU_65c02 = 2;
-
-const uint8_t N_FLAG = (1 << 7);
-const uint8_t V_FLAG = (1 << 6);
-const uint8_t M_FLAG = (1 << 5);
-const uint8_t X_FLAG = (1 << 4);
-const uint8_t D_FLAG = (1 << 3);
-const uint8_t I_FLAG = (1 << 2);
-const uint8_t Z_FLAG = (1 << 1);
-const uint8_t C_FLAG = 0x01;
 
 
 const uint16_t VEC_RESET = 0xFFFC;
@@ -257,22 +243,22 @@ void cpu_fetch(uint32_t addr)
 
 uint8_t get_ir_opcode(void)
 {
-	return cpu_dynamic_metadata.ir[0];
+    return cpu_dynamic_metadata.ir[0];
 }
 
 uint8_t get_ir_oplen(void)
 {
-	return cpu_dynamic_metadata.oplen;
+    return cpu_dynamic_metadata.oplen;
 }
 
 address_mode_t get_ir_addr_mode(void)
 {
-	return cpu_dynamic_metadata.addr_mode;
+    return cpu_dynamic_metadata.addr_mode;
 }
 
 uint8_t get_ir_indexed(uint8_t index)
 {
-	return cpu_dynamic_metadata.ir[index];
+    return cpu_dynamic_metadata.ir[index];
 }
 
 int main(void)

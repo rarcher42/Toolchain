@@ -4,6 +4,21 @@ typedef uint8_t BOOL;
 #define FALSE (0)
 #define TRUE (!FALSE)
 
+
+#define N_FLAG 0x80
+#define V_FLAG 0x40
+#define M_FLAG 0x20
+#define X_FLAG 0x10
+#define D_FLAG 0x08
+#define I_FLAG 0x04
+#define Z_FLAG 0x02
+#define C_FLAG 0x01
+
+#define CPU_65816 (0)
+#define CPU_6502 (1)
+#define CPU_65c02 (2)
+
+
 typedef union {
     uint16_t C;
     struct {
@@ -58,14 +73,6 @@ typedef struct {
     uint8_t reset_pending;      // RESET signal went low
 } cpu_event_metadata_t;
 
-extern const uint8_t N_FLAG;
-extern const uint8_t V_FLAG;
-extern const uint8_t M_FLAG;
-extern const uint8_t X_FLAG;
-extern const uint8_t D_FLAG;
-extern const uint8_t I_FLAG;
-extern const uint8_t Z_FLAG;
-extern const uint8_t C_FLAG;
 
 extern void SET_FLAG (uint8_t fset_mask);
 extern void CLR_FLAG (uint8_t fres_mask);
@@ -74,9 +81,11 @@ extern uint8_t GET_FLAG(uint8_t flag);
 extern uint8_t get_cpu_type(void);
 extern char *get_mnemonic(uint8_t op);
 extern uint32_t calc_EA(void);
+// The cpu_fetch() function populates the instruction register
+// and metadata as sharable metadata across modules.
 extern void cpu_fetch(uint32_t addr);
-uint8_t get_ir_opcode(void);
-extern uint8_t get_ir_oplen(void);
-extern address_mode_t  get_ir_addr_mode(void);
-extern uint8_t get_ir_indexed(uint8_t index);
+uint8_t get_ir_opcode(void);	// The op-code just fetched
+extern uint8_t get_ir_oplen(void);	// The op-code length
+extern address_mode_t  get_ir_addr_mode(void);	// OP's address mode
+extern uint8_t get_ir_indexed(uint8_t index);	// Get any ir reg byte
 

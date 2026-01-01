@@ -1,6 +1,7 @@
 
 
 #define MAX_OPS_LEN (3)
+
 typedef enum
 {
     OP_NONE = 0, OP_A, OP_IMM, OP_ABS, OP_ABS_L, OP_ABS_IND, OP_ABS_IND_L,

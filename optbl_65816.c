@@ -3,7 +3,6 @@
 #include "optbl_65816.h"
 #include "sim.h"
 
-
 // sizeinfo field: includes modifiers for M and X flags
 const uint8_t LEN1 = 0x01;
 const uint8_t LEN2 = 0x02;
