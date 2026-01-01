@@ -13,7 +13,7 @@ typedef enum
 typedef struct op_tbl
 {
     char ops[MAX_OPS_LEN+1];    // Hold full opcode plus null
-    uint8_t unsupport;		// Flags for unsupported CPU versions
+    uint8_t unsupport;      // Flags for unsupported CPU versions
     uint8_t sizeinfo;
     address_mode_t adm;
 

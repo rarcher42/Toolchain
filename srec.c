@@ -7,7 +7,6 @@
 
 const int MAX_LINE = 130;
 
-
 static inline uint8_t hex_val(uint8_t c)
 {
     uint8_t g = 0;

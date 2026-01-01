@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "sim.h"
 #include "optbl_65816.h"
+#include "sim.h"
 
 
 // sizeinfo field: includes modifiers for M and X flags
@@ -14,9 +14,9 @@ const uint8_t X_ADDS = 0x40;    // If X = 0, then add 1 to inst len
 
 const uint8_t NOT_65C02 = 0x01;     // Instruction not supported 65c02
 const uint8_t NOT_6502 = 0x02;      // Instruction not supported NMOS
-const uint8_t AL = 0x0;				// All supported
-const uint8_t N2 = (NOT_6502);		// Only 6502 not supported
-const uint8_t NB = (NOT_6502 | NOT_65C02);	// Only 65816 supported
+const uint8_t AL = 0x0;             // All supported
+const uint8_t N2 = (NOT_6502);      // Only 6502 not supported
+const uint8_t NB = (NOT_6502 | NOT_65C02);  // Only 65816 supported
 
 op_tbl opcode_table[] = {
 {"BRK", AL, LEN1, OP_NONE},     //$00
@@ -289,29 +289,29 @@ uint8_t get_oplen (uint8_t op)
     uint8_t oplen;
     uint8_t unsupport;
     
-	sizeinfo = opcode_table[op].sizeinfo;
-	unsupport = opcode_table[op].unsupport;
+    sizeinfo = opcode_table[op].sizeinfo;
+    unsupport = opcode_table[op].unsupport;
  
     if ((get_cpu_type() == 1) && (unsupport & NOT_6502)) { 
         printf("Unimplemented NMOS 6502 opcode $%02X\n", op);
-	return 0;    // Not implemented!
+    return 0;    // Not implemented!
     }
     if ((get_cpu_type() == 2) && (unsupport & NOT_65C02)) {
         printf("Unimplemented CMOS 65c02 opcode $%02X\n", op);
-	return 0;    // Not implemented!
+    return 0;    // Not implemented!
     }
     oplen = sizeinfo & 0x7;  // Extract length bits
    
     if (sizeinfo & M_ADDS) {
-	// Instruction:  add 1 byte if M flag is set
+    // Instruction:  add 1 byte if M flag is set
         if (GET_FLAG(M_FLAG) == 0) {
-	        ++oplen;
-		}
-	}
+            ++oplen;
+        }
+    }
     if (sizeinfo & X_ADDS)  {
         if (GET_FLAG(X_FLAG) == 0) {
-	        ++oplen;
-		}
+            ++oplen;
+        }
     }
     return oplen;
 }
