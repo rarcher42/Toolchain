@@ -21,6 +21,15 @@ uint8_t get_cpu_type(void)
     return cpu_static_metadata.cpu_type;
 }
 
+BOOL is_65816(void)
+{
+	if ((cpu_static_metadata.cpu_type == CPU_6502) ||
+		(cpu_static_metadata.cpu_type == CPU_65C02)) {
+		return FALSE;
+	}
+	return TRUE;
+}
+
 void set_cpu_type(uint8_t ct)
 {
     cpu_static_metadata.cpu_type = ct;
@@ -58,9 +67,24 @@ void SET_EMU(BOOL emu_mode)
     }
 }
 
-uint8_t GET_EMU(void)
+uint8_t IS_EMU(void)
 {
     return cpu_state.em;
+}
+
+uint8_t get_dbr(void) 
+{
+	return cpu_state.DBR;
+}
+
+uint8_t get_pbr(void)
+{
+	return cpu_state.PBR;
+}
+
+uint16_t get_dpr(void)
+{
+	return cpu_state.DPR;
 }
 
 void init_cpu(void)
@@ -81,137 +105,6 @@ void init_cpu(void)
     cpu_state.PC = new_pc;
 }
 
-uint32_t calc_EA(void)
-{
-    address_mode_t addr_mode;
-    uint8_t oplen;
-    uint16_t ea;
-    
-    addr_mode = cpu_dynamic_metadata.addr_mode;
-    oplen = cpu_dynamic_metadata.oplen;
-    
-    switch((int) addr_mode) {
-    case OP_NONE:
-        printf("OP_NONE(null)");
-        break;
-        
-    case OP_A:
-        if (GET_FLAG(M_FLAG)) {
-            printf("OP_A(%02X)", cpu_state.A.AL);
-        } else {
-            printf("OP_A(%04X)", cpu_state.A.C);
-        }
-        break;
-
-    case OP_IMM:
-        if (oplen == 3) 
-            ;
-        else
-            ;
-        printf("OP_IMM");
-        break;
-
-    case OP_ABS:
-        printf("OP_ABS");
-        break;
-
-    case OP_ZP:
-        printf("OP_ZP");
-        break;
-    
-    case OP_ABS_L:
-        printf("OP_ABS_L");
-        break;
-    
-    case OP_REL:
-        printf("OP_REL");
-        break;
-    
-    case OP_REL_L:
-        printf("OP_REL_L");
-        break;
-    
-    case OP_ZP_XI:
-        printf("OP_ZX_XI");
-        break;
-
-    case OP_ZP_IY:
-        printf("OP_ZP_IY");
-        break;
-
-    case OP_ZP_IND_L:
-        printf("OP_ZP_IND_L");
-        break;
-
-    case OP_ZP_IND:
-        printf("OP_ZP_IND");
-        break;
-
-    case OP_ZP_IY_L:
-        printf("OP_ZP_IY_L");
-        break;
-
-    case OP_ZP_X:
-        printf("OP_ZP_X");
-        break;
-
-    case OP_ZP_Y:
-        printf("OP_ZP_Y");
-        break;
-
-    case OP_ABS_X:
-        printf("OP_ABS_X");
-        break;
-
-    case OP_ABS_X_L:
-        printf("OP_ABS_X_L");
-        break;
-
-    case OP_ABS_Y:
-        printf("OP_ABS_Y");
-        break;
-
-    case OP_SR:
-        printf("OP_SR");
-        break; 
-
-    case OP_SR_IY:
-        printf("OP_SR_IY");
-        break;
-
-    case OP_ABS_IND:
-        printf("OP_ABS_IND");
-        break; 
-    
-    case OP_ABS_IND_L:
-        printf("OP_ABS_IND_L");
-        break;
-
-    case OP_ABS_X_IND:
-        printf("OP_ABS_X_IND");
-        break;
-
-    case OP_STACK:
-        if ((cpu_static_metadata.cpu_type == CPU_65c02) || (cpu_static_metadata.cpu_type == CPU_6502) ||
-            (cpu_state.em == 1)) {
-            ea = (cpu_state.SP & 0x00FF) | 0x0100;
-            printf("OP_STACK(%04X)", ea);
-        } else {
-            printf("OP_STACK(%04X)", cpu_state.SP);
-        }
-        break;
-        
-        
-    case OP_2OPS:
-        printf("OP_2OPS");
-        break;
-        
-    default:
-        printf("================ FATAL CODE ERROR:  UNIMPLEMENTED ADDRESS MODE!!!! ===========");
-        break;
-    } // switch address mode
-    return 0x00000000;  // Fill in later
-}
 
 void print_fetchbuffer(void)
 {
@@ -229,6 +122,14 @@ void cpu_fetch(uint32_t addr)
     uint8_t op;
     int i;
     
+    // FIXME: remove after integration
+    // We're doing part of the job of the execution engine
+    // here that will be redundant later.
+    // Note that if we simulate CPU cycle-wise, the relative
+    // calculations may need to be adjusted for pipeline advances.
+    cpu_state.PC = addr & 0xFFFF;
+    cpu_state.PBR = (addr >> 16) & 0xFF;
+    // FIXME: end pre-integration bodge
     op = cpu_read(addr);
     cpu_dynamic_metadata.ir[0] = op;
     cpu_dynamic_metadata.oplen = get_oplen(op);
@@ -267,13 +168,17 @@ int main(void)
     uint32_t start_address;
     uint32_t end_address;
     
-    init_vm();	// Create the infrastructure to support memory regions
-    alloc_target_system_memory();
- 
+    init_vm();  // Create the infrastructure to support memory regions
+    alloc_target_system_memory();   // Create the system memory blocks
     print_block_list();
 
     init_cpu(); 
-    cpu_state.A.C = 0x6502;
+    cpu_state.A.C = 0xABCD;
+    cpu_state.DPR = 0x9000;		// HAL would approve
+    cpu_state.PBR = 0x00;
+    cpu_state.DBR = 0x00;
+    cpu_state.X = 0x0101;
+    cpu_state.Y = 0x0202;
     load_srec("allops_m0x0.s19", &start_address, &end_address);
     CLR_FLAG(M_FLAG | X_FLAG);
     set_cpu_type(CPU_65816);
@@ -304,7 +209,7 @@ int main(void)
     load_srec("allops_65c02.s19", &start_address, &end_address);
     SET_FLAG(M_FLAG);
     SET_FLAG(X_FLAG);
-    set_cpu_type(CPU_65c02);
+    set_cpu_type(CPU_65C02);
     printf("****  65c02  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     

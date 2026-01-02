@@ -6,6 +6,7 @@
 #include "vm.h"
 #include "srec.h"
 #include "sim.h"
+#include "calc_ea.h"
 
 
 

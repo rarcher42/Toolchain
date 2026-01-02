@@ -195,7 +195,7 @@ int handler_rom(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
         printf("Error:  cannot write to ROM location $%08X\n", addr);
         return 0;
     } else {
-        printf("Reading from ROM location $%08X\n", addr);
+        // printf("Reading from ROM location $%08X\n", addr);
         return p->mem[addr - p->saddr];
     }
 }
@@ -215,7 +215,7 @@ int handler_flash(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
         printf("Error:  cannot write to ROM location $%08X\n", addr);
         return 0;
     } else {
-        printf("Reading from ROM location $%08X\n", addr);
+        // printf("Reading from ROM location $%08X\n", addr);
         return p->mem[addr - p->saddr];
     }
 }
