@@ -16,6 +16,14 @@ static inline uint32_t calc_noEA(void)
     return 0xFFFFFFFF;  // > 24 bits means no EA applies
 }
 
+// There are all sorts of optimization opportunities below!
+// Intentionally avoided until all corner cases (page crossing behavior 
+// (wrap, advance), 
+// bank crossing behavior(wrap advance), cycle count adjustments &
+// all other fine details must be fully worked through
+// on all the addressing modes before it's worth trying to
+// consolidate and optimize.  
+// Get it working right first, then tighten it up.   
 uint32_t calc_abs(void)
 {
     uint32_t ea;
@@ -42,6 +50,51 @@ uint32_t calc_abs(void)
     return ea;
 }
 
+uint32_t calc_abs_ind(void)
+{
+	uint32_t ea;
+	uint16_t base;
+	uint8_t lsb, msb;
+	
+	ea = calc_abs();
+	lsb = cpu_read(ea);
+	msb = cpu_read(ea+1);
+	base = (msb << 8) | lsb;
+	
+	if (is_65816()) {
+		if (IS_EMU()) {
+			ea = base;
+		} else {
+			ea = (get_pbr() << 16) | base;
+		}
+	} else {
+		ea = base;
+		// legacy
+	}     
+	printf("OP_ABS_IND($%08X)", ea);
+    return ea;    
+}
+
+uint32_t calc_abs_ind_l(void)
+{
+	uint32_t ea;
+	uint8_t lsb, msb, page;
+	
+	if (is_65816()) {
+		ea = calc_abs();
+		lsb = cpu_read(ea);
+		msb = cpu_read(ea+1);
+		page = cpu_read(ea+2);
+		ea = (page << 16) | (msb << 8) | lsb;
+	} else {
+		// legacy
+		printf("*** ERROR: Not supported on legacy CPU! ***");
+		ea = 0xFFFFFFFF;
+	}   
+	printf("OP_ABS_IND_L($%08X)", ea);
+	return ea;
+}
+	
 uint32_t calc_abs_l(void)
 {
     uint32_t ea;
@@ -183,6 +236,54 @@ uint32_t calc_zp(void)
     return ea;  
 }
 
+
+uint32_t calc_zp_ind(void)
+{
+	uint32_t ea;
+	uint16_t base;
+	uint8_t lsb, msb, page;
+	
+	ea = calc_zp();
+	lsb = get_ir_indexed(1);
+	msb = get_ir_indexed(2);
+	base = (msb << 16) | lsb;
+	page = get_pbr();
+	if (is_65816()) {
+		if (IS_EMU()) {
+			ea = base;
+		} else {
+			ea = (page << 16) | base;
+		}
+	} else {
+		// Legacy CPU
+		ea = (page << 16) | base;
+	}
+	printf("OP_ZP_IND($%08X)", ea);
+	return ea;
+}
+
+uint32_t calc_zp_ind_l(void)
+{
+	uint32_t ea;
+	uint8_t lsb, msb, page;
+	
+	ea = calc_zp();
+	lsb = get_ir_indexed(1);
+	msb = get_ir_indexed(2);
+	page = get_ir_indexed(3);
+	
+	if (is_65816()) {
+		ea = (page << 16) | (msb << 8) | lsb;
+	} else {
+		// Legacy CPU
+		printf("*** ERROR: not supported by selected CPU! ***");
+		ea = 0xFFFFFFFF;
+	}
+	printf("OP_ZP_IND_L($%08X)", ea);
+	return ea;
+}
+
+
 uint32_t calc_zp_x(void)
 {
     uint32_t ea;
@@ -261,6 +362,36 @@ uint32_t calc_zp_y(void)
     return ea;
 }
 
+uint32_t calc_zp_iy(void)
+{
+	uint32_t ea;
+	uint16_t base;
+	uint8_t lsb, msb, page;
+	
+	ea = calc_zp();			// Address where pointer resides in direct page
+	lsb = cpu_read(ea);		// Get pointer LSB
+	msb = cpu_read(ea+1);	// Get pointer MSB
+	base = (msb << 8) | lsb;
+	
+	if (is_65816()) {
+		page = get_pbr();
+		if (IS_EMU()) {
+			ea = base + (cpu_state.Y & 0xFF);
+		} else {
+			if (GET_FLAG(X_FLAG)) {
+				ea = ((page << 16) | base) + (cpu_state.Y & 0xFF);
+			} else {
+				ea = ((page << 16) | base) + cpu_state.Y;
+			}
+		}
+	} else {
+		// Legacy CPU
+		ea = base + (cpu_state.Y & 0xFF);
+	}
+	printf("OP_ZP_IY($%08X)", ea);
+	return ea;
+}
+        
 uint32_t calc_rel(void)
 {
     uint32_t ea;
@@ -350,29 +481,45 @@ uint32_t calc_rel_l(void)
     return ea;
 }
 
+
+// This will probably be a test / integration tool to be discarded
+// when the execution unit is fully fleshed out.  It's written 
+// to validate EA calculations.  
+// A jump table would be much more efficient, but also much more
+// error-prone during code changes, so leave that to the end of the
+// process as performance is a minor objective given the hardware
+// it will run on is likely >> 100x+ faster than the simulated hardware
 uint32_t calc_EA(void)
 {
     uint32_t ea = 0xFFFFFFFF;
     
     switch((int) get_ir_addr_mode()) {
     case OP_NONE:
-        printf("OP_NONE");
+        printf("OP_NONE(0xFFFFFFFF)");
         ea = calc_noEA();
         break;
         
     case OP_A:
-        printf("OP_A");
+        printf("OP_A(0xFFFFFFFF)");
         ea = calc_noEA();
         break;
 
     case OP_IMM:
         /* No EA */
-        printf("OP_IMM");
+        printf("OP_IMM(0xFFFFFFFF)");
         ea = calc_noEA();
         break;
 
     case OP_ABS:
         ea = calc_abs();
+        break;
+
+	case OP_ABS_IND:
+		ea = calc_abs_ind();
+        break; 
+    
+    case OP_ABS_IND_L:
+		ea = calc_abs_ind_l();
         break;
 
     case OP_ABS_L:
@@ -394,6 +541,14 @@ uint32_t calc_EA(void)
     case OP_ZP:
         ea = calc_zp();
         break;
+
+	case OP_ZP_IND:
+        ea = calc_zp_ind();
+        break;
+
+	case OP_ZP_IND_L:
+		ea = calc_zp_ind_l();
+        break;    
     
     case OP_ZP_X:
         ea = calc_zp_x();
@@ -416,15 +571,7 @@ uint32_t calc_EA(void)
         break;
 
     case OP_ZP_IY:
-        printf("OP_ZP_IY");
-        break;
-
-    case OP_ZP_IND_L:
-        printf("OP_ZP_IND_L");
-        break;
-
-    case OP_ZP_IND:
-        printf("OP_ZP_IND");
+		ea = calc_zp_iy();
         break;
 
     case OP_ZP_IY_L:
@@ -439,14 +586,7 @@ uint32_t calc_EA(void)
         printf("OP_SR_IY");
         break;
 
-    case OP_ABS_IND:
-        printf("OP_ABS_IND");
-        break; 
     
-    case OP_ABS_IND_L:
-        printf("OP_ABS_IND_L");
-        break;
-
     case OP_ABS_X_IND:
         printf("OP_ABS_X_IND");
         break;
@@ -459,11 +599,6 @@ uint32_t calc_EA(void)
         } else {
             printf("OP_STACK(%04X)", cpu_state.SP);
         }
-        break;
-        
-        
-    case OP_2OPS:
-        printf("OP_2OPS");
         break;
         
     default:

@@ -86,7 +86,7 @@ op_tbl opcode_table[] = {
 {"EOR", NB, LEN2, OP_ZP_XI},    //$41
 {"WDM", NB, LEN2, OP_IMM},     //$42
 {"EOR", NB, LEN2, OP_SR},    //$43
-{"MVP", NB, LEN3, OP_2OPS},    //$44
+{"MVP", NB, LEN3, OP_IMM},    //$44
 {"EOR", AL, LEN2, OP_ZP},    //$45
 {"LSR", AL, LEN2, OP_ZP},    //$46
 {"EOR", NB, LEN2, OP_ZP_IND_L},    //$47
@@ -102,7 +102,7 @@ op_tbl opcode_table[] = {
 {"EOR", AL, LEN2, OP_ZP_IY},    //$51
 {"EOR", N2, LEN2, OP_ZP_IND},    //$52
 {"EOR", N2, LEN2, OP_SR_IY},    //$53
-{"MVN", NB, LEN3, OP_2OPS},    //$54
+{"MVN", NB, LEN3, OP_IMM},    //$54
 {"EOR", AL, LEN2, OP_ZP_X},    //$55
 {"LSR", AL, LEN2, OP_ZP_X},    //$56
 {"EOR", NB, LEN2, OP_ZP_IY_L},    //$57
