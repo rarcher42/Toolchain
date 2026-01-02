@@ -116,7 +116,7 @@ op_tbl opcode_table[] = {
 {"EOR", NB, LEN4, OP_ABS_X_L},     //$5F
 {"RTS", AL, LEN1, OP_NONE},     //$60
 {"ADC", AL, LEN2, OP_ZP_XI},    //$61
-{"PER", NB, LEN3, OP_REL},    //$62
+{"PER", NB, LEN3, OP_REL_L},    //$62
 {"ADC", NB, LEN2, OP_SR},    //$63
 {"STZ", N2, LEN2, OP_ZP},    //$64
 {"ADC", AL, LEN2, OP_ZP},    //$65

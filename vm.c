@@ -233,5 +233,5 @@ void alloc_target_system_memory(void)
     alloc_block(0x7FC0, 0x7FDF, handler_via1);  // VIA
     alloc_block(0x7FE0, 0x7FFF, handler_via2);  // USB VIA
     alloc_block(0x0, 0x7EFF, handler_ram);      // RAM
-    alloc_block(0x8000, 0xFFFF, handler_flash); // FLASH
+    alloc_block(0x8000, 0xFFFF, handler_ram); // FLASH - changed to RAM for vector testing
 }

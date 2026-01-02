@@ -58,7 +58,7 @@ uint32_t calc_abs_ind(void)
 	
 	ea = calc_abs();
 	lsb = cpu_read(ea);
-	msb = cpu_read(ea+1);
+	msb = cpu_read(ea + 1);
 	base = (msb << 8) | lsb;
 	
 	if (is_65816()) {
@@ -79,12 +79,13 @@ uint32_t calc_abs_ind_l(void)
 {
 	uint32_t ea;
 	uint8_t lsb, msb, page;
+
+	ea = calc_abs();
+	lsb = cpu_read(ea);
+	msb = cpu_read(ea + 1);
+	page = cpu_read(ea + 2);
 	
 	if (is_65816()) {
-		ea = calc_abs();
-		lsb = cpu_read(ea);
-		msb = cpu_read(ea+1);
-		page = cpu_read(ea+2);
 		ea = (page << 16) | (msb << 8) | lsb;
 	} else {
 		// legacy
@@ -150,6 +151,22 @@ uint32_t calc_abs_x(void)
     return ea;      
 }
 
+uint32_t calc_abs_x_ind(void)
+{
+	uint32_t ea;
+
+	ea = calc_abs_x();
+	uint8_t lsb, msb, page;
+	
+	lsb = cpu_read(ea);
+	msb = cpu_read(ea + 1);
+	page = cpu_read(ea + 2);
+	
+	ea = (page << 16) | (msb << 8) | lsb;
+	printf("OP_ABS_X_IND($%08X)", ea);
+	return ea;
+}       
+        
 uint32_t calc_abs_y(void)
 {
     uint32_t ea;
@@ -215,22 +232,21 @@ uint32_t calc_zp(void)
 {
     uint32_t ea;
     uint16_t dpr;
-    uint8_t base;
+    uint8_t offset;
     
-    base = get_ir_indexed(1);
+    offset = get_ir_indexed(1);
     if (is_65816()) {
         dpr = get_dpr();
         if (IS_EMU()) {
             // In emulation mode, page wrap-around
-            ea = dpr + base;
+            ea = dpr + offset;
         } else {
             // No page wrap around
-            ea = base;
+            ea = dpr + offset;
         }
     } else {
-        ea = base;      // 0x00 + 8 bit operand
-    }
-    ea = dpr + base;    
+        ea = offset;      // 0x00 + 8 bit operand
+    }    
     // FIXME: consider page crossings by mode 
     printf("OP_ZP($%08X)", ea);
     return ea;  
@@ -244,9 +260,9 @@ uint32_t calc_zp_ind(void)
 	uint8_t lsb, msb, page;
 	
 	ea = calc_zp();
-	lsb = get_ir_indexed(1);
-	msb = get_ir_indexed(2);
-	base = (msb << 16) | lsb;
+	lsb = cpu_read(ea);
+	msb = cpu_read(ea + 1);
+	base = (msb << 8) | lsb;
 	page = get_pbr();
 	if (is_65816()) {
 		if (IS_EMU()) {
@@ -268,9 +284,9 @@ uint32_t calc_zp_ind_l(void)
 	uint8_t lsb, msb, page;
 	
 	ea = calc_zp();
-	lsb = get_ir_indexed(1);
-	msb = get_ir_indexed(2);
-	page = get_ir_indexed(3);
+	lsb = cpu_read(ea);
+	msb = cpu_read(ea + 1);
+	page = cpu_read(ea + 2);
 	
 	if (is_65816()) {
 		ea = (page << 16) | (msb << 8) | lsb;
@@ -283,6 +299,29 @@ uint32_t calc_zp_ind_l(void)
 	return ea;
 }
 
+uint32_t calc_zp_iy_l (void)
+{
+	uint32_t ea;
+	
+	ea = calc_zp_ind_l();
+	if (is_65816()) {
+		if (IS_EMU()) {
+			ea = ea + (cpu_state.Y & 0xFF);
+		} else {
+			if (GET_FLAG(X_FLAG)) {
+				ea = ea + (cpu_state.Y & 0xFF);
+			} else {
+				ea = ea + cpu_state.Y;
+			}
+		}
+	} else {
+		// Legacy CPU
+		printf("*** ERROR: not supported by selected CPU! ***");
+		ea = 0xFFFFFFFF;
+	}
+	printf("OP_ZP_IY_L($%08X)", ea);
+	return ea;
+}
 
 uint32_t calc_zp_x(void)
 {
@@ -358,7 +397,7 @@ uint32_t calc_zp_y(void)
         // Legacy 6502 or 65C02
         ea = (base + (cpu_state.Y & 0xFF)) & 0xFF;  // wraps
     }
-    printf("OP_ZP_X($%08X", ea);
+    printf("OP_ZP_Y($%08X)", ea);
     return ea;
 }
 
@@ -439,7 +478,7 @@ uint32_t calc_rel_l(void)
 {
     uint32_t ea;
     uint32_t base;
-    uint8_t offset;
+    uint16_t offset;
     uint8_t lsb, msb;
     
     lsb = get_ir_indexed(1);    // SIGNED offset.  Handle accordingly
@@ -481,6 +520,75 @@ uint32_t calc_rel_l(void)
     return ea;
 }
 
+uint32_t calc_stack(void)
+{
+	uint32_t ea;
+	
+	if (is_65816()) {
+		if (IS_EMU()) {
+			ea = 0x100 | (cpu_state.SP & 0xFF);
+		} else {
+			ea = cpu_state.SP;
+		}
+	} else {
+		// Legacy CPUs
+		ea = 0x100 | (cpu_state.SP & 0xFF);
+	}
+	printf("OP_STACK($%08X)", ea);
+	return ea;
+}
+
+uint32_t calc_sr(void)
+{
+	uint32_t ea;
+	uint16_t sp;
+	uint8_t offset;
+	
+	offset = get_ir_indexed(1);
+	if (is_65816()) {
+		if (IS_EMU()) {
+			sp = 0x0100 | (((cpu_state.SP & 0xFF) + offset) & 0xFF);
+		} else {
+			sp = cpu_state.SP + offset;
+		}
+		ea = sp;
+	} else {
+		// Legacy CPU
+		printf("*** ERROR: Unsupported addressing mode for CPU! ***");
+		ea = 0xFFFFFFFF;
+	}
+    printf("OP_SR($%08X)", ea);
+    return ea;
+}
+
+uint32_t calc_sr_iy(void)
+{
+	uint32_t ea;
+	uint8_t lsb, msb;
+	
+	ea = calc_sr();
+	lsb = cpu_read(ea);
+	msb = cpu_read(ea+1);
+	ea = (msb << 8) | (lsb);
+	
+	if (is_65816()) {
+		if (IS_EMU()) {
+			ea = ea + (cpu_state.Y & 0xFF);
+		} else {
+			if (GET_FLAG(X_FLAG)) {
+				ea = ea + (cpu_state.Y & 0xFF);
+			} else {
+				ea = ea + cpu_state.Y;
+			}
+		}
+	} else {
+		// Legacy CPU
+		printf("*** ERROR: unsupported addressing mode for CPU! ***");
+	}
+	
+	printf("OP_SR_IY($%08X)", ea);
+	return ea;
+}
 
 // This will probably be a test / integration tool to be discarded
 // when the execution unit is fully fleshed out.  It's written 
@@ -495,115 +603,108 @@ uint32_t calc_EA(void)
     
     switch((int) get_ir_addr_mode()) {
     case OP_NONE:
-        printf("OP_NONE(0xFFFFFFFF)");
-        ea = calc_noEA();
+        printf("OP_NONE(0xFFFFFFFF)");	
+        ea = calc_noEA();	// OK
         break;
         
     case OP_A:
-        printf("OP_A(0xFFFFFFFF)");
-        ea = calc_noEA();
+        printf("OP_A(0xFFFFFFFF)");	
+        ea = calc_noEA();	// OK
         break;
 
     case OP_IMM:
         /* No EA */
         printf("OP_IMM(0xFFFFFFFF)");
-        ea = calc_noEA();
+        ea = calc_noEA();	// OK
         break;
 
     case OP_ABS:
-        ea = calc_abs();
+        ea = calc_abs();	// FP OK
         break;
 
 	case OP_ABS_IND:
-		ea = calc_abs_ind();
+		ea = calc_abs_ind();	// FP OK
         break; 
-    
+     
     case OP_ABS_IND_L:
-		ea = calc_abs_ind_l();
+		ea = calc_abs_ind_l();	// FP OK
         break;
 
     case OP_ABS_L:
-        ea = calc_abs_l();
+        ea = calc_abs_l();		// FP OK
         break;
     
     case OP_ABS_X:
-        ea = calc_abs_x();
+        ea = calc_abs_x();		// FP OK
+        break;
+        
+	case OP_ABS_X_IND:
+		ea = calc_abs_x_ind();	// FP OK
         break;
     
     case OP_ABS_Y:
-        ea = calc_abs_y();
+        ea = calc_abs_y();		// FP OK
         break;
 
     case OP_ABS_X_L:
-        ea = calc_abs_x_l();
+        ea = calc_abs_x_l();	// FP OK
         break;
 
     case OP_ZP:
-        ea = calc_zp();
+        ea = calc_zp();			// FP OK	
         break;
 
 	case OP_ZP_IND:
-        ea = calc_zp_ind();
+        ea = calc_zp_ind();		//FP OK		
         break;
 
 	case OP_ZP_IND_L:
-		ea = calc_zp_ind_l();
+		ea = calc_zp_ind_l();	// FP OK
         break;    
     
-    case OP_ZP_X:
-        ea = calc_zp_x();
+    case OP_ZP_IY_L:
+		ea = calc_zp_iy_l();	// FP OK
+        break;
+        
+    case OP_ZP_X:				
+        ea = calc_zp_x();		// FP OK
         break;
 
     case OP_ZP_Y:
-        ea = calc_zp_y();
+        ea = calc_zp_y();		// FP OK
         break;
         
     case OP_REL:
-        ea = calc_rel();
+        ea = calc_rel();		// FP OK
         break;
     
     case OP_REL_L:
-        ea = calc_rel_l();
+        ea = calc_rel_l();		// FP OK
         break;
     
     case OP_ZP_XI:
-        ea = calc_zp_xi();
+        ea = calc_zp_xi();		// FP OK
         break;
 
     case OP_ZP_IY:
-		ea = calc_zp_iy();
-        break;
-
-    case OP_ZP_IY_L:
-        printf("OP_ZP_IY_L");
+		ea = calc_zp_iy();		// FP OK
         break;
 
     case OP_SR:
-        printf("OP_SR");
+		ea = calc_sr();			// FP OK
         break; 
 
     case OP_SR_IY:
-        printf("OP_SR_IY");
-        break;
-
-    
-    case OP_ABS_X_IND:
-        printf("OP_ABS_X_IND");
+        ea = calc_sr_iy();		// FP OK
         break;
 
     case OP_STACK:
-        if ((get_cpu_type() == CPU_65C02) || (get_cpu_type() == CPU_6502) ||
-            (cpu_state.em == 1)) {
-            ea = (cpu_state.SP & 0x00FF) | 0x0100;
-            printf("OP_STACK(%04X)", ea);
-        } else {
-            printf("OP_STACK(%04X)", cpu_state.SP);
-        }
-        break;
+		ea = calc_stack();
+		break;
         
     default:
         printf("================ FATAL CODE ERROR:  UNIMPLEMENTED ADDRESS MODE!!!! ===========");
-        break;
+        exit(-1);
     } // switch address mode
     return ea;
 }

@@ -53,7 +53,7 @@ int disasm_one(uint32_t my_addr, char *outs)
         break;
     
     case OP_ABS_L:
-        sprintf(param, "$%06X ", val);
+        sprintf(param, "$%04X ", val);
         break;
     
     case OP_REL:
@@ -123,7 +123,7 @@ int disasm_one(uint32_t my_addr, char *outs)
         break; 
     
     case OP_ABS_IND_L:
-        sprintf(param, "[$%06X] ", val);
+        sprintf(param, "[$%04X] ", val);
         break;
 
     case OP_ABS_X_IND:
