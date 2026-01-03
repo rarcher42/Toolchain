@@ -45,12 +45,15 @@ typedef struct {
 // CPU metadata here.  This is stuff that might be hardware in the CPU,
 // and in any event are very convenient to track CPU behavior with.
 typedef struct {
+    BOOL running;               // CPU is running if TRUE, halted otherwise
     uint32_t cycle_counter;     // Cycle counter
     uint8_t oplen;              // Remember operation length
     uint16_t fetch_pc;          // FIXME: PC at fetch time needed for integration for now
     uint8_t fetch_pbr;          // FIXME: PBR at fetch time; remove after integration
     address_mode_t  addr_mode;  // Remember address mode
     uint32_t EA;                // calculated effective address
+    uint16_t TEMP;				
+    uint8_t TEMP_L;
     uint8_t ir[4];              // Virtual instruction
                                 // register 0..oplen-1 valid
 } cpu_dynamic_metadata_t;
@@ -90,9 +93,12 @@ BOOL is_65C02(void);
 extern uint16_t get_dpr(void);
 extern uint8_t get_dbr(void);
 extern uint8_t get_pbr(void);
+extern void get_flags(char *flags);
+extern void dump_registers(void);
 // For tightly-coupled helper modules (e.g. calc_ea), 
 // allow acess to cpu_state.  Use accessor functions later?
 extern cpu_state_t cpu_state;
+extern cpu_dynamic_metadata_t cpu_dynamic_metadata;
 
 // Various accessor functions
 extern char *get_mnemonic(uint8_t op);
@@ -108,7 +114,10 @@ extern uint32_t get_EA (void);
 extern uint32_t make_linear_address(uint8_t bank, uint16_t pc);
 extern uint32_t get_cpu_address_linear(void);
 extern void put_cpu_address_linear(uint32_t address);
-
+extern void load_temp16 (void);
+extern void load_temp8(void);
+void store_temp16(void);
+void store_temp8(void);
 extern void cpu_fetch(void);
 extern void cpu_decode(void);
 

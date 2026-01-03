@@ -70,6 +70,33 @@ uint8_t GET_FLAG (uint8_t flag)
     return 0;
 }
 
+void change_nflag16(uint16_t val)
+{
+	if (val >= 0x8000) {
+		SET_FLAG(N_FLAG);
+	} else {
+		CLR_FLAG(N_FLAG);
+	}
+}
+
+void change_zflag(uint16_t val)
+{
+	if (val == 0) {
+		SET_FLAG(Z_FLAG);
+	} else {
+		CLR_FLAG(Z_FLAG);
+	}
+}
+
+void change_nflag8 (uint8_t val)
+{
+	if (val >= 0x80) {
+		SET_FLAG(N_FLAG);
+	} else {
+		CLR_FLAG(N_FLAG);
+	}	
+}
+
 void SET_EMU (BOOL emu_mode)
 {
     if (emu_mode) {
@@ -97,6 +124,109 @@ uint8_t get_pbr (void)
 uint16_t get_dpr (void)
 {
     return cpu_state.DPR;
+}
+
+void get_flags(char *flags)
+{
+	int i;
+	
+	for (i = 0; i < 8; i++) {
+		flags[i] = '-';
+	}
+	
+	if (GET_FLAG(N_FLAG)) {
+		flags[0] = 'N';
+	}
+	if (GET_FLAG(V_FLAG)) {
+		flags[1]  = 'V';
+	}
+	
+	if (GET_FLAG(D_FLAG)) {
+		flags[4] = 'D';
+	}
+	
+	if (GET_FLAG(I_FLAG)) {
+		flags[5] = 'I';
+	}
+	
+	if (GET_FLAG(Z_FLAG)) {
+		flags[6] = 'Z';
+	}
+	
+	if (GET_FLAG(C_FLAG)) {
+		flags[7] = 'C';
+	}
+	
+	if ((is_65816()) && (!IS_EMU())) {
+		if (GET_FLAG(M_FLAG)) {
+			flags[2] = 'M';
+		}
+		if (GET_FLAG(X_FLAG)) {
+			flags[3] = 'X';
+		}
+	} else {
+		if (GET_FLAG(X_FLAG)) {
+			flags[3] = 'B';	// Break flag 
+		}
+	}
+}
+
+void dump_registers (void)
+{
+	char param[32];
+	char outs[128];
+
+	if (is_65816()) {
+		sprintf(param, "%02X:%04X ", cpu_state.PBR, cpu_state.PC);
+		strcpy(outs, param);
+	} else {
+		sprintf(param, "%04X    ", cpu_state.PC);
+	}
+	strcpy(outs, param);
+	
+	if (is_65816()) {
+		if (GET_FLAG(M_FLAG)) {
+			sprintf(param, "A=%02X B=%02X ", cpu_state.A.AL, cpu_state.A.B);
+		} else {
+			sprintf(param, "C=%04X    ", cpu_state.A.C);
+		}
+	} else {
+		sprintf(param, "A=%02X      ", cpu_state.A.AL);
+	}
+	strcat(outs, param);
+		
+	if ((is_65816()) && (GET_FLAG(X_FLAG) == 0)) {
+		sprintf(param, "X=%04X Y=%04X ", cpu_state.X, cpu_state.Y);
+	} else {
+		sprintf(param, "X=%02X   Y=%02X   ", (cpu_state.X & 0xFF), (cpu_state.Y & 0xFF));
+	}
+	strcat(outs, param);
+	
+	if ((!IS_EMU()) && (is_65816())) {
+		sprintf(param, "SP=%04X ", cpu_state.SP);
+	} else {
+		sprintf(param, "SP=%04X ", ((cpu_state.SP & 0xFF) | 0x100));
+	}
+	strcat(outs, param);
+	
+	if (is_65816()) {
+		sprintf(param, "DPR=%04X ", cpu_state.DPR);
+		strcat(outs, param);
+		sprintf(param, "DBR=%02X ", cpu_state.DBR);
+		strcat(outs, param);
+	} else {
+		strcat(outs, "                ");
+	}
+	get_flags(param);
+	strcat(outs, param);\
+	if (is_65816()) {
+		if (IS_EMU()) {
+			strcat(outs, " [E]");
+		} else {
+			strcat(outs, " [N]");
+		}
+	}
+	printf("%s", outs);
 }
 
 void init_cpu (void)
@@ -181,6 +311,85 @@ uint8_t get_ir_indexed (uint8_t index)
     return cpu_dynamic_metadata.ir[index];
 }
 
+void load_temp8 (void)
+{
+	uint32_t dptr;
+	uint8_t temp;
+	
+	dptr = get_EA();
+	if (dptr == 0xFFFFFFFF) {
+		temp = get_ir_indexed(1);
+		// printf("I8_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
+	} else {
+		temp = cpu_read(dptr);
+		// printf("M8 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
+	}
+	cpu_dynamic_metadata.TEMP = temp & 0xFF;
+	change_nflag8(temp);
+	change_zflag(temp);
+}
+
+void load_temp16 (void)
+{
+	uint32_t dptr;
+	uint16_t temp;
+	uint8_t lsb, msb;
+	
+	dptr = get_EA();
+	if (dptr == 0xFFFFFFFF) {
+		temp = (get_ir_indexed(2) << 8) | get_ir_indexed(1);
+		// printf("I16 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);	
+	} else {
+		lsb = cpu_read(dptr);
+		msb = cpu_read(dptr + 1);
+		temp = (msb << 8) | lsb;
+		// printf("M16 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
+	}
+	cpu_dynamic_metadata.TEMP = temp;
+	change_nflag16(temp);
+	change_zflag(temp);
+}
+
+void store_temp16 (void)
+{
+	uint32_t dptr;
+	uint8_t lsb, msb;
+	
+	dptr = get_EA();
+	lsb = cpu_dynamic_metadata.TEMP & 0xFF;
+	msb = (cpu_dynamic_metadata.TEMP >> 8) & 0xFF;
+	cpu_write(dptr, lsb);
+	cpu_write(dptr + 1, msb);
+}
+
+void store_temp8 (void)
+{
+	uint32_t dptr;
+	uint8_t lsb;
+	
+	dptr = get_EA();
+	lsb = cpu_dynamic_metadata.TEMP & 0xFF;
+	cpu_write(dptr, lsb);
+}
+
+
+void temp_to_A (void)
+{
+	cpu_state.A.C = cpu_dynamic_metadata.TEMP;	// FIXME: must check all flags
+}
+
+void temp_to_X (void)
+{
+	cpu_state.X = cpu_dynamic_metadata.TEMP;
+}
+
+void temp_to_Y (void)
+{
+	cpu_state.Y = cpu_dynamic_metadata.TEMP;
+}
+
+
+
 void cpu_fetch (void)
 {
     uint32_t addr;
@@ -210,9 +419,33 @@ void cpu_decode (void)
 }
 
 // run one instruction
-void cpu_execute (void)
+void cpu_execute (void)	
 {
-    
+	uint32_t addr;
+	void (*fn)(void);
+   
+	fn = get_op_function(get_ir_opcode());
+	(*fn)();
+    addr = get_cpu_address_linear() + get_ir_oplen();
+    put_cpu_address_linear(addr);   // FIXME: real CPU knows to inc PBR?
+        
+}
+
+void cpu_run(void)
+{
+	int kludge = 0;
+	
+	cpu_dynamic_metadata.running = TRUE;
+	while (cpu_dynamic_metadata.running) {
+		cpu_fetch();  // Next instruction to "execute' (print)
+        cpu_decode();
+        // We won't execute the instruction in this case :);
+        disasm_current();
+        cpu_execute();
+        if (++kludge > 1000) {
+			cpu_dynamic_metadata.running = FALSE;
+		}
+    } 
 }
 
 int main (void)
@@ -225,109 +458,18 @@ int main (void)
     print_block_list();
 
     init_cpu(); 
-    cpu_state.A.C = 0xABCD;
-    cpu_state.DPR = 0x9000;     // HAL would approve
-    cpu_state.PBR = 0x00;
-    cpu_state.DBR = 0x00;
-    cpu_state.X = 0x0101;
-    cpu_state.Y = 0x0202;
-    cpu_state.SP = 0x70FF;
-    cpu_write(0xFFFC, 0x04);
-    cpu_write(0xFFFD, 0x2A);    // SOL-20 magic entry point
-    cpu_write(0x1234, 0x02);
-    cpu_write(0x1235, 0x65);
-    cpu_write(0x1236, 0x99);
-    cpu_write(0x8081, 0x09);
-    cpu_write(0x8082, 0x68);
-    cpu_write(0x8083, 0x07);
-    cpu_write(0x8181, 0x09);
-    cpu_write(0x8182, 0x68);
-    cpu_write(0x8183, 0xAA);
-    cpu_write(0x9042, 0x08);
-    cpu_write(0x9043, 0x80);
-    cpu_write(0x42, 0x04);
-    cpu_write(0x43, 0x40);
     
-    cpu_write(0x33, 0x56);
-    cpu_write(0x34, 0x34);
-    cpu_write(0x35, 0x12);
-    
-    cpu_write(0x9012, 0x66);
-    cpu_write(0x9013, 0x67);
-    cpu_write(0x9014, 0x68);
-    
-    cpu_write(0x12, 0x57);
-    cpu_write(0x13, 0x56);
-    cpu_write(0x14, 0x55);
-    
-    
-    cpu_write(0x9033, 0xEF);
-    cpu_write(0x9034, 0xCD);
-    cpu_write(0x9035, 0xAB);
-    
-    cpu_write(0x9131, 0x55);
-    cpu_write(0x9132, 0xAA);
-    cpu_write(0x9031, 0x55);
-    cpu_write(0x9032, 0xAA);
-    cpu_write(0x31, 0x55);
-    cpu_write(0x32, 0xAA);
-    
-    cpu_write(0x7100, 0x02);
-    cpu_write(0x7101, 0x18);
-    
-    load_srec("allops_m1x1.s19", &start_address, &end_address);
-    SET_FLAG(M_FLAG);
-    SET_FLAG(X_FLAG);
-    set_cpu_type(CPU_65816);
-    SET_EMU(TRUE);
-    printf("****  EMULATION  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
-    
-    
+    load_srec("dow.s19", &start_address, &end_address);
+    CLR_FLAG(M_FLAG);
+    CLR_FLAG(X_FLAG);
+    SET_FLAG(N_FLAG);
+    SET_FLAG(Z_FLAG);
     set_cpu_type(CPU_65816);
     SET_EMU(FALSE);
-    load_srec("allops_m0x0.s19", &start_address, &end_address);
-    CLR_FLAG(M_FLAG | X_FLAG);
-    set_cpu_type(CPU_65816);
-    printf("**** M%dX%d sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_m0x1.s19", &start_address, &end_address);
-    CLR_FLAG(M_FLAG);
-    SET_FLAG(X_FLAG);
-    set_cpu_type(CPU_65816);
-    printf("****  M%dX%d  sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_m1x0.s19", &start_address, &end_address);
-    SET_FLAG(M_FLAG);
-    CLR_FLAG(X_FLAG);
-    set_cpu_type(CPU_65816);
-    printf("****  M%dX%d  sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
-    disasm(start_address, end_address);
-  
-    load_srec("allops_m1x1.s19", &start_address, &end_address);
-    SET_FLAG(M_FLAG);
-    SET_FLAG(X_FLAG);
-    set_cpu_type(CPU_65816);
-    printf("****  M%dX%d  sa = %08X, ea=%08X ***** \n", GET_FLAG(M_FLAG), GET_FLAG(X_FLAG), start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_65c02.s19", &start_address, &end_address);
-    SET_FLAG(M_FLAG);
-    SET_FLAG(X_FLAG);
-    set_cpu_type(CPU_65C02);
-    printf("****  65c02  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
-    load_srec("allops_6502.s19", &start_address, &end_address);
-    SET_FLAG(M_FLAG);
-    SET_FLAG(X_FLAG);
-    set_cpu_type(CPU_6502);
-    printf("****  6502  sa = %08X, ea=%08X ***** \n", start_address, end_address);
-    disasm(start_address, end_address);
-    
+    printf("****  EMULATION  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    put_cpu_address_linear(start_address);
+    cpu_run();
+    // disasm(start_address, end_address);
     exit(0);
 }
 

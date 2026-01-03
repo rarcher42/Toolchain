@@ -17,8 +17,10 @@ typedef struct op_tbl
     uint8_t unsupport;      // Flags for unsupported CPU versions
     uint8_t sizeinfo;
     address_mode_t adm;
+    void (*do_op)(void);	// Do the opcode!
 
 } op_tbl;
 
 extern address_mode_t get_addr_mode(uint8_t op);
-uint8_t get_oplen(uint8_t op);
+extern uint8_t get_oplen(uint8_t op);
+extern void *get_op_function(uint8_t op);
