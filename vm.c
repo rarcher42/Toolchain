@@ -102,6 +102,7 @@ void print_block_list (void)
 
 int cpu_write (uint32_t addr, uint8_t data)
 {
+	
     mem_block_descriptor_t *bdp;
     // Implement caching!  For now, just make it work
     bdp = find_block_descriptor(addr);
@@ -115,15 +116,14 @@ int cpu_write (uint32_t addr, uint8_t data)
 int cpu_read (uint32_t addr)
 {
     mem_block_descriptor_t *bdp;
-    uint8_t val;
+    
     // Implement caching!  For now, just make it work
     bdp = find_block_descriptor(addr);
     if (bdp == NULL) {
         printf("LOCATION %08X not found!\n", addr);
         return -1;
     }
-    val = bdp->implementation((void *) bdp, addr, 0, 0);    // Do read via handler
-    return val;
+    return bdp->implementation((void *) bdp, addr, 0, 0);    // Do read via handler
 }
 
 int handler_via1 (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)

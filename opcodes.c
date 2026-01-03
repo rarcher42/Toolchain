@@ -83,20 +83,6 @@ void xce (void)
     }
 }
 
-void set_zflag(uint8_t val)
-{
-    if (val == 0) {
-        SET_FLAG(Z_FLAG);
-    } else {
-        CLR_FLAG(Z_FLAG);
-    }
-}
-
-void set_nflag(uint8_t val)
-{
-    
-}
-
 
 void lda (void)
 {
