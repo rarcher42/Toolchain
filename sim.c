@@ -31,6 +31,17 @@ BOOL is_65816 (void)
     return TRUE;
 }
 
+BOOL is_6502 (void)
+{
+	return (cpu_static_metadata.cpu_type == CPU_6502);
+}
+
+BOOL is_65C02 (void)
+{
+	return (cpu_static_metadata.cpu_type == CPU_65C02);
+}
+
+
 void set_cpu_type (uint8_t ct)
 {
     cpu_static_metadata.cpu_type = ct;
@@ -126,6 +137,18 @@ uint32_t make_linear_address(uint8_t bank, uint16_t pc)
 uint32_t get_cpu_address_linear(void)
 {
 	return make_linear_address(cpu_state.PBR, cpu_state.PC);
+}
+
+void put_cpu_address_linear(uint32_t address)
+{
+	uint8_t bank;
+	uint16_t pc;
+	
+	bank = (address >> 16) & 0xFF;
+	pc = (address & 0xFFFF);
+	
+	cpu_state.PBR = bank;
+	cpu_state.PC = pc;
 }
 
 uint8_t get_ir_opcode (void)
@@ -257,7 +280,7 @@ int main (void)
     SET_FLAG(X_FLAG);
     set_cpu_type(CPU_65816);
     SET_EMU(TRUE);
-    printf("****  EMULATUION  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    printf("****  EMULATION  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     disasm(start_address, end_address);
     
     

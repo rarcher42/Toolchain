@@ -85,6 +85,8 @@ extern uint8_t IS_EMU(void);
 extern void SET_EMU(uint8_t em);
 extern uint8_t get_cpu_type(void);
 extern BOOL is_65816(void);
+BOOL is_6502(void);
+BOOL is_65C02(void);
 extern uint16_t get_dpr(void);
 extern uint8_t get_dbr(void);
 extern uint8_t get_pbr(void);
@@ -105,6 +107,7 @@ extern void set_EA(uint32_t ea);
 extern uint32_t get_EA (void);
 extern uint32_t make_linear_address(uint8_t bank, uint16_t pc);
 extern uint32_t get_cpu_address_linear(void);
+extern void put_cpu_address_linear(uint32_t address);
 
 extern void cpu_fetch(void);
 extern void cpu_decode(void);

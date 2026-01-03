@@ -16,6 +16,105 @@
 //
 // This is how we'll unify disassembler and CPU execution unit.
 // (No CPUs were harmed in any way in the process)
+
+
+void get_flags(char *flags)
+{
+	int i;
+	
+	for (i = 0; i < 8; i++) {
+		flags[i] = '-';
+	}
+	
+	if (GET_FLAG(N_FLAG)) {
+		flags[0] = 'N';
+	}
+	if (GET_FLAG(V_FLAG)) {
+		flags[1]  = 'V';
+	}
+	
+	if (GET_FLAG(D_FLAG)) {
+		flags[4] = 'D';
+	}
+	
+	if (GET_FLAG(I_FLAG)) {
+		flags[5] = 'I';
+	}
+	
+	if (GET_FLAG(Z_FLAG)) {
+		flags[6] = 'Z';
+	}
+	
+	if (GET_FLAG(C_FLAG)) {
+		flags[7] = 'C';
+	}
+	
+	if ((is_65816()) && (!IS_EMU())) {
+		if (GET_FLAG(M_FLAG)) {
+			flags[2] = 'M';
+		}
+		if (GET_FLAG(X_FLAG)) {
+			flags[3] = 'X';
+		}
+	} else {
+		if (GET_FLAG(X_FLAG)) {
+			flags[3] = 'B';	// Break flag 
+		}
+	}
+}
+
+void dump_registers (void)
+{
+	char param[32];
+	char outs[128];
+
+	if (is_65816()) {
+		sprintf(param, "%02X:%04X ", cpu_state.PBR, cpu_state.PC);
+		strcpy(outs, param);
+	} else {
+		sprintf(param, "%04X    ", cpu_state.PC);
+	}
+	strcpy(outs, param);
+	
+	if (is_65816()) {
+		if (GET_FLAG(M_FLAG)) {
+			sprintf(param, "A=%02X B=%02X ", cpu_state.A.AL, cpu_state.A.B);
+		} else {
+			sprintf(param, "C=%04X    ", cpu_state.A.C);
+		}
+	} else {
+		sprintf(param, "A=%02X      ", cpu_state.A.AL);
+	}
+	strcat(outs, param);
+		
+	if ((is_65816()) && (GET_FLAG(X_FLAG) == 0)) {
+		sprintf(param, "X=%04X Y=%04X ", cpu_state.X, cpu_state.Y);
+	} else {
+		sprintf(param, "X=%02X   Y=%02X   ", (cpu_state.X & 0xFF), (cpu_state.Y & 0xFF));
+	}
+	strcat(outs, param);
+	
+	if ((!IS_EMU()) && (is_65816())) {
+		sprintf(param, "SP=%04X ", cpu_state.SP);
+	} else {
+		sprintf(param, "SP=%04X ", ((cpu_state.SP & 0xFF) | 0x100));
+	}
+	strcat(outs, param);
+	
+	if (is_65816()) {
+		sprintf(param, "DPR=%04X ", cpu_state.DPR);
+		strcat(outs, param);
+		sprintf(param, "DBR=%02X ", cpu_state.DBR);
+		strcat(outs, param);
+	} else {
+		strcat(outs, "                ");
+	}
+	get_flags(param);
+	strcat(outs, param);
+	
+	printf("%s", outs);
+}
+
 #define DEBUG_TEXT_COL_START (36)
 void disasm_current (void)
 {
@@ -34,7 +133,7 @@ void disasm_current (void)
     op = get_ir_opcode();
     oplen = get_ir_oplen();
     addr_mode = get_ir_addr_mode();
-    addr = make_linear_address(cpu_state.PBR, cpu_state.PC);
+    addr = get_cpu_address_linear();
     sprintf(outs, "%06X: ", addr);
     for (i = 0; i < 4; i++) {
         if (i < oplen) {
@@ -167,7 +266,8 @@ void disasm_current (void)
         }   // FIXME: inefficient AF but lazy; makes output readable :)
     }
     printf("%s", outs);
-    print_EA();
+    // print_EA();
+    dump_registers();
     printf("\n");
     return;
 }
@@ -177,7 +277,10 @@ void disasm_current (void)
 // Used by disassembler only
 static void advance (void)
 {
-    cpu_state.PC += get_ir_oplen(); 
+	uint32_t addr;
+	
+	addr = get_cpu_address_linear() + get_ir_oplen();
+	put_cpu_address_linear(addr);	// FIXME: real CPU knows to inc PBR?									
 }
 
 void disasm (uint32_t sa, uint32_t ea)
@@ -185,7 +288,7 @@ void disasm (uint32_t sa, uint32_t ea)
     cpu_state.PBR = (sa >> 16) & 0xFF;
     cpu_state.PC = sa & 0xFFFF;
     
-    while ((make_linear_address(cpu_state.PBR, cpu_state.PC)) <= ea) {
+    while (get_cpu_address_linear() <= ea) {
         cpu_fetch();  // Next instruction to "execute' (print)
         cpu_decode();
         // We won't execute the instruction in this case :);
