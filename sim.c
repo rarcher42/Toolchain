@@ -489,6 +489,15 @@ int main (void)
     put_cpu_address_linear(start_address);
     cpu_run();
     // disasm(start_address, end_address);
+    uint16_t a;
+    uint16_t b;
+    uint32_t diff;
+    
+    a = 0x5000;
+    b = 0x5001;
+    diff = a - b;
+    printf("%08X\n", diff);
+    
     exit(0);
 }
 

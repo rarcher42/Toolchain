@@ -221,9 +221,9 @@ void sbc (void)
             sum = sum - 1;
         }
         if (sum > 0xFFFF) {
-            SET_FLAG(C_FLAG);	// FIXME: probably wrong
+            CLR_FLAG(C_FLAG);	// > 2^16 means borrow occurred
         } else {
-            CLR_FLAG(C_FLAG);
+            SET_FLAG(C_FLAG);
         }
         sum &= 0xFFFF;
         change_vflag(v1, v2, sum, TRUE); 
@@ -239,9 +239,9 @@ void sbc (void)
             sum = sum - 1;
         }
         if (sum > 0xFF) {
-            SET_FLAG(C_FLAG);	// FIXME: definitely wrong
+            CLR_FLAG(C_FLAG);	// FIXME: definitely wrong
         } else {
-            CLR_FLAG(C_FLAG);
+            SET_FLAG(C_FLAG);
         }
         sum &= 0xFF;
         change_vflag(v1, v2, sum, FALSE);
