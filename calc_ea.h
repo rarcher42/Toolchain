@@ -1,2 +1,3 @@
-extern uint32_t calc_EA(void);
+extern void calc_EA(void);
+extern void print_EA(void);
 

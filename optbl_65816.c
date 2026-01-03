@@ -26,10 +26,10 @@ op_tbl opcode_table[] = {
 {"ORA", AL, LEN2, OP_ZP},    //$05
 {"ASL", AL, LEN2, OP_ZP},    //$06
 {"ORA", NB, LEN2, OP_ZP_IND_L},    //$07
-{"PHP", AL, LEN1, OP_STACK},     //$08
+{"PHP", AL, LEN1, OP_STK},     //$08
 {"ORA", AL, LEN2|M_ADDS, OP_IMM},     //$09
 {"ASL", AL, LEN1, OP_A},     //$0A
-{"PHD", NB, LEN1, OP_STACK},     //$0B
+{"PHD", NB, LEN1, OP_STK},     //$0B
 {"TSB", N2, LEN3, OP_ABS},     //$0C
 {"ORA", AL, LEN3, OP_ABS},     //$0D
 {"ASL", AL, LEN3, OP_ABS},     //$0E
@@ -58,10 +58,10 @@ op_tbl opcode_table[] = {
 {"AND", AL, LEN2, OP_ZP},    //$25
 {"ROL", AL, LEN2, OP_ZP},    //$26
 {"AND", NB, LEN2, OP_ZP_IND_L},    //$27
-{"PLP", AL, LEN1, OP_STACK},     //$28
+{"PLP", AL, LEN1, OP_STK},     //$28
 {"AND", AL, LEN2|M_ADDS, OP_IMM},     //$29
 {"ROL", AL, LEN1, OP_A},     //$2A
-{"PLD", NB, LEN1, OP_STACK},     //$2B
+{"PLD", NB, LEN1, OP_STK},     //$2B
 {"BIT", AL, LEN3, OP_ABS},     //$2C
 {"AND", AL, LEN3, OP_ABS},     //$2D
 {"ROL", AL, LEN3, OP_ABS},     //$2E
@@ -90,10 +90,10 @@ op_tbl opcode_table[] = {
 {"EOR", AL, LEN2, OP_ZP},    //$45
 {"LSR", AL, LEN2, OP_ZP},    //$46
 {"EOR", NB, LEN2, OP_ZP_IND_L},    //$47
-{"PHA", AL, LEN1, OP_STACK},     //$48
+{"PHA", AL, LEN1, OP_STK},     //$48
 {"EOR", AL, LEN2|M_ADDS, OP_IMM},     //$49
 {"LSR", AL, LEN1, OP_A},     //$4A
-{"PHK", NB, LEN1, OP_STACK},     //$4B
+{"PHK", NB, LEN1, OP_STK},     //$4B
 {"JMP", AL, LEN3, OP_ABS},     //$4C
 {"EOR", AL, LEN3, OP_ABS},     //$4D
 {"LSR", AL, LEN3, OP_ABS},     //$4E
@@ -108,7 +108,7 @@ op_tbl opcode_table[] = {
 {"EOR", NB, LEN2, OP_ZP_IY_L},    //$57
 {"CLI", AL, LEN1, OP_NONE},     //$58
 {"EOR", AL, LEN3, OP_ABS_Y},     //$59
-{"PHY", N2, LEN1, OP_STACK},     //$5A
+{"PHY", N2, LEN1, OP_STK},     //$5A
 {"TCD", NB, LEN1, OP_NONE},     //$5B
 {"JML", NB, LEN4, OP_ABS_L},     //$5C
 {"EOR", AL, LEN3, OP_ABS_X},     //$5D
@@ -122,7 +122,7 @@ op_tbl opcode_table[] = {
 {"ADC", AL, LEN2, OP_ZP},    //$65
 {"ROR", AL, LEN2, OP_ZP},    //$66
 {"ADC", NB, LEN2, OP_ZP_IND_L},    //$67
-{"PLA", AL, LEN1, OP_STACK},     //$68
+{"PLA", AL, LEN1, OP_STK},     //$68
 {"ADC", AL, LEN2|M_ADDS, OP_IMM},     //$69
 {"ROR", AL, LEN1, OP_A},     //$6A
 {"RTL", NB, LEN1, OP_NONE},     //$6B
@@ -140,7 +140,7 @@ op_tbl opcode_table[] = {
 {"ADC", NB, LEN2, OP_ZP_IY_L},    //$77
 {"SEI", AL, LEN1, OP_NONE},     //$78
 {"ADC", AL, LEN3, OP_ABS_Y},     //$79
-{"PLY", N2, LEN1, OP_STACK},     //$7A
+{"PLY", N2, LEN1, OP_STK},     //$7A
 {"TDC", NB, LEN1, OP_NONE},     //$7B
 {"JMP", N2, LEN3, OP_ABS_X_IND},    //$7C
 {"ADC", AL, LEN3, OP_ABS_X},     //$7D
@@ -157,7 +157,7 @@ op_tbl opcode_table[] = {
 {"DEY", AL, LEN1, OP_NONE},     //$88
 {"BIT", AL, LEN2|M_ADDS, OP_IMM},     //$89
 {"TXA", AL, LEN1, OP_NONE},     //$8A
-{"PHB", NB, LEN1, OP_STACK},     //$8B
+{"PHB", NB, LEN1, OP_STK},     //$8B
 {"STY", AL, LEN3, OP_ABS},     //$8C
 {"STA", AL, LEN3, OP_ABS},     //$8D
 {"STX", AL, LEN3, OP_ABS},     //$8E
@@ -189,7 +189,7 @@ op_tbl opcode_table[] = {
 {"TAY", AL, LEN1, OP_NONE},     //$A8
 {"LDA", AL, LEN2|M_ADDS, OP_IMM},     //$A9
 {"TAX", AL, LEN1, OP_NONE},     //$AA
-{"PLB", NB, LEN1, OP_STACK},     //$AB
+{"PLB", NB, LEN1, OP_STK},     //$AB
 {"LDY", AL, LEN3, OP_ABS},     //$AC
 {"LDA", AL, LEN3, OP_ABS},     //$AD
 {"LDX", AL, LEN3, OP_ABS},     //$AE
@@ -236,7 +236,7 @@ op_tbl opcode_table[] = {
 {"CMP", NB, LEN2, OP_ZP_IY_L},    //$D7
 {"CLD", AL, LEN1, OP_NONE},     //$D8
 {"CMP", AL, LEN3, OP_ABS_Y},     //$D9
-{"PHX", N2, LEN1, OP_STACK},     //$DA
+{"PHX", N2, LEN1, OP_STK},     //$DA
 {"STP", N2, LEN1, OP_NONE},     //$DB
 {"JML", NB, LEN3, OP_ABS_IND_L},     //$DC
 {"CMP", AL, LEN3, OP_ABS_X},     //$DD
@@ -268,7 +268,7 @@ op_tbl opcode_table[] = {
 {"SBC", NB, LEN2, OP_ZP_IY_L},    //$F7
 {"SED", AL, LEN1, OP_NONE},     //$F8
 {"SBC", AL, LEN3, OP_ABS_Y},     //$F9
-{"PLX", N2, LEN1, OP_STACK},     //$FA
+{"PLX", N2, LEN1, OP_STK},     //$FA
 {"XCE", NB, LEN1, OP_NONE},     //$FB
 {"JSR", NB, LEN3, OP_ABS_X_IND},    //$FC
 {"SBC", AL, LEN3, OP_ABS_X},     //$FD
@@ -319,5 +319,4 @@ uint8_t get_oplen (uint8_t op)
     }
     return oplen;
 }
-
 

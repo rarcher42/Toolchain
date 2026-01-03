@@ -8,7 +8,7 @@ typedef enum
     OP_ABS_X, OP_ABS_Y, OP_ABS_X_L, OP_ABS_X_IND, OP_ZP,
     OP_ZP_IND, OP_ZP_IND_L, OP_ZP_X, OP_ZP_Y, OP_ZP_XI,
     OP_ZP_IY, OP_ZP_IY_L, OP_REL, OP_REL_L, OP_SR, OP_SR_IY, 
-    OP_STACK
+    OP_STK
 } address_mode_t;
 
 typedef struct op_tbl

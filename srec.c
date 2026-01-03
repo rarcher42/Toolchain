@@ -7,7 +7,7 @@
 
 const int MAX_LINE = 130;
 
-static inline uint8_t hex_val(uint8_t c)
+static inline uint8_t hex_val (uint8_t c)
 {
     uint8_t g = 0;
 
@@ -21,7 +21,7 @@ static inline uint8_t hex_val(uint8_t c)
     return g;
 }
 
-uint32_t from_hex_str(uint8_t *s, uint8_t n)
+uint32_t from_hex_str (uint8_t *s, uint8_t n)
 {
     uint32_t sum = 0;
     int i;
@@ -32,7 +32,7 @@ uint32_t from_hex_str(uint8_t *s, uint8_t n)
     return sum;
 }
 
-uint32_t from_hex(uint32_t addr, uint8_t n)
+uint32_t from_hex (uint32_t addr, uint8_t n)
 {
     uint32_t sum = 0;
     int i;
@@ -44,7 +44,7 @@ uint32_t from_hex(uint32_t addr, uint8_t n)
     return sum;
 }
 
-void dump_hex(uint32_t sa, uint32_t ea)
+void dump_hex (uint32_t sa, uint32_t ea)
 {
     uint32_t addr;
 
@@ -58,7 +58,7 @@ void dump_hex(uint32_t sa, uint32_t ea)
 }
 
 
-int load_srec(char *fn, uint32_t *start_address, uint32_t *end_address)
+int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
 {
     int j;
     FILE *fp;

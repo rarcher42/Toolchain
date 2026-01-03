@@ -11,7 +11,7 @@ void init_vm(void)
     mem_list_head = NULL;
 }
 
-int alloc_block(uint32_t saddr, uint32_t eaddr,
+int alloc_block (uint32_t saddr, uint32_t eaddr,
     int (*handler)(void *self, uint32_t addr, uint8_t data, uint8_t wr))
 {
     uint32_t bl;
@@ -41,7 +41,7 @@ int alloc_block(uint32_t saddr, uint32_t eaddr,
     return 0;    
 }
 
-int del_block_containing(uint32_t ma)
+int del_block_containing (uint32_t ma)
 {
     mem_block_descriptor_t *mbp;
     mem_block_descriptor_t *prev;
@@ -69,7 +69,7 @@ int del_block_containing(uint32_t ma)
 }
 
 
-mem_block_descriptor_t *find_block_descriptor(uint32_t ma)
+mem_block_descriptor_t *find_block_descriptor (uint32_t ma)
 {
 
     mem_block_descriptor_t *mbp;
@@ -85,7 +85,7 @@ mem_block_descriptor_t *find_block_descriptor(uint32_t ma)
 }
 
 
-void print_block_list(void)
+void print_block_list (void)
 {
     mem_block_descriptor_t *mbp;
 
@@ -100,7 +100,7 @@ void print_block_list(void)
     }
 }
 
-int cpu_write(uint32_t addr, uint8_t data)
+int cpu_write (uint32_t addr, uint8_t data)
 {
     mem_block_descriptor_t *bdp;
     // Implement caching!  For now, just make it work
@@ -112,7 +112,7 @@ int cpu_write(uint32_t addr, uint8_t data)
     return bdp->implementation((void *) bdp, addr, data, 1);    // Do write via handler
 }
 
-int cpu_read(uint32_t addr)
+int cpu_read (uint32_t addr)
 {
     mem_block_descriptor_t *bdp;
     uint8_t val;
@@ -138,31 +138,31 @@ int handler_via2 (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
     return 0;
 }
 
-int handler_acia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+int handler_acia (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
     printf("cWarning: no handlier for ACIA: alled handler_acia($%08X, $%02X), wr=%d\n", addr, data, wr);
     return 0;
 }
 
-int handler_pia(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+int handler_pia (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
     printf("Warning: No hanlder for PIA: called handler_pia($%08X, $%02X), wr=%d\n", addr, data, wr);
     return 0;
 }
 
-int handler_io_unimplemented(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+int handler_io_unimplemented (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
     printf("Unhandled I/O device: called handler_io_unimplemented($%08X, $%02X)\n, wr=%d", addr, data, wr);
     return 0;
 }
 
 
-int handler_null(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+int handler_null (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
     return 0;
 }
 
-int handler_ram(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+int handler_ram (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
     mem_block_descriptor_t *p;
     
@@ -181,7 +181,7 @@ int handler_ram(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
     }
 }
 
-int handler_rom(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+int handler_rom (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
 
     mem_block_descriptor_t *p;
@@ -201,7 +201,7 @@ int handler_rom(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 }
 
 
-int handler_flash(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
+int handler_flash (void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 {
         mem_block_descriptor_t *p;
     
@@ -221,7 +221,7 @@ int handler_flash(void *bdp, uint32_t addr, uint8_t data, uint8_t wr)
 }
 
 
-void alloc_target_system_memory(void) 
+void alloc_target_system_memory (void) 
 {
    // Set up the memory regions for the target system
     alloc_block(0x7F00, 0x7F1F, handler_io_unimplemented);  // XBUS0 (not implmemented)

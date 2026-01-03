@@ -7,6 +7,7 @@
 #include "srec.h"
 #include "disasm.h"
 #include "sim.h"
+#include "calc_ea.h"
 
 cpu_state_t cpu_state;
 cpu_dynamic_metadata_t cpu_dynamic_metadata;
@@ -16,21 +17,21 @@ cpu_static_metadata_t cpu_static_metadata;
 const uint16_t VEC_RESET = 0xFFFC;
 
 
-uint8_t get_cpu_type(void)
+uint8_t get_cpu_type (void)
 {
     return cpu_static_metadata.cpu_type;
 }
 
-BOOL is_65816(void)
+BOOL is_65816 (void)
 {
-	if ((cpu_static_metadata.cpu_type == CPU_6502) ||
-		(cpu_static_metadata.cpu_type == CPU_65C02)) {
-		return FALSE;
-	}
-	return TRUE;
+    if ((cpu_static_metadata.cpu_type == CPU_6502) ||
+        (cpu_static_metadata.cpu_type == CPU_65C02)) {
+        return FALSE;
+    }
+    return TRUE;
 }
 
-void set_cpu_type(uint8_t ct)
+void set_cpu_type (uint8_t ct)
 {
     cpu_static_metadata.cpu_type = ct;
 }
@@ -45,12 +46,12 @@ void CLR_FLAG (uint8_t fres_mask)
     cpu_state.flags &= ~fres_mask;
 }
 
-uint8_t GET_FLAGS(void)
+uint8_t GET_FLAGS (void)
 {
     return cpu_state.flags;
 }
 
-uint8_t GET_FLAG(uint8_t flag)
+uint8_t GET_FLAG (uint8_t flag)
 {
     if (cpu_state.flags & flag) {
         return 1;
@@ -58,7 +59,7 @@ uint8_t GET_FLAG(uint8_t flag)
     return 0;
 }
 
-void SET_EMU(BOOL emu_mode)
+void SET_EMU (BOOL emu_mode)
 {
     if (emu_mode) {
         cpu_state.em = 0x1;
@@ -67,27 +68,27 @@ void SET_EMU(BOOL emu_mode)
     }
 }
 
-uint8_t IS_EMU(void)
+uint8_t IS_EMU (void)
 {
     return cpu_state.em;
 }
 
-uint8_t get_dbr(void) 
+uint8_t get_dbr (void) 
 {
-	return cpu_state.DBR;
+    return cpu_state.DBR;
 }
 
-uint8_t get_pbr(void)
+uint8_t get_pbr (void)
 {
-	return cpu_state.PBR;
+    return cpu_state.PBR;
 }
 
-uint16_t get_dpr(void)
+uint16_t get_dpr (void)
 {
-	return cpu_state.DPR;
+    return cpu_state.DPR;
 }
 
-void init_cpu(void)
+void init_cpu (void)
 {
     uint16_t new_pc;
     
@@ -106,7 +107,7 @@ void init_cpu(void)
 }
 
 
-void print_fetchbuffer(void)
+void print_fetchbuffer (void)
 {
     int i;
     
@@ -117,23 +118,57 @@ void print_fetchbuffer(void)
     printf("\n");   
 }
 
-void cpu_fetch(uint32_t addr)
+uint32_t make_linear_address(uint8_t bank, uint16_t pc)
 {
+    return (((bank & 0xFF) << 16) | (pc & 0xFFFF));
+}
+
+uint32_t get_cpu_address_linear(void)
+{
+	return make_linear_address(cpu_state.PBR, cpu_state.PC);
+}
+
+uint8_t get_ir_opcode (void)
+{
+    return cpu_dynamic_metadata.ir[0];
+}
+
+uint8_t get_ir_oplen (void)
+{
+    return cpu_dynamic_metadata.oplen;
+}
+
+void set_EA (uint32_t ea)
+{
+    cpu_dynamic_metadata.EA = ea;
+}
+
+uint32_t get_EA (void)
+{
+    return cpu_dynamic_metadata.EA;
+}
+
+address_mode_t get_ir_addr_mode (void)
+{
+    return cpu_dynamic_metadata.addr_mode;
+}
+
+uint8_t get_ir_indexed (uint8_t index)
+{
+    return cpu_dynamic_metadata.ir[index];
+}
+
+void cpu_fetch (void)
+{
+    uint32_t addr;
     uint8_t op;
     int i;
     
-    // FIXME: remove after integration
-    // We're doing part of the job of the execution engine
-    // here that will be redundant later.
-    // Note that if we simulate CPU cycle-wise, the relative
-    // calculations may need to be adjusted for pipeline advances.
-    cpu_state.PC = addr & 0xFFFF;
-    cpu_state.PBR = (addr >> 16) & 0xFF;
-    // FIXME: end pre-integration bodge
+    addr = get_cpu_address_linear();
     op = cpu_read(addr);
     cpu_dynamic_metadata.ir[0] = op;
     cpu_dynamic_metadata.oplen = get_oplen(op);
-    cpu_dynamic_metadata.addr_mode = get_addr_mode(op);
+    
     if (cpu_dynamic_metadata.oplen > 1) {
         for (i = 1; i < cpu_dynamic_metadata.oplen; i++) {
             cpu_dynamic_metadata.ir[i] = cpu_read(addr+i);
@@ -142,28 +177,22 @@ void cpu_fetch(uint32_t addr)
     // print_fetchbuffer();
 }
 
-uint8_t get_ir_opcode(void)
+void cpu_decode (void)
 {
-    return cpu_dynamic_metadata.ir[0];
+    uint8_t opcode;
+    
+    opcode = cpu_dynamic_metadata.ir[0];    // opcode
+    cpu_dynamic_metadata.addr_mode = get_addr_mode(opcode);
+    calc_EA();
 }
 
-uint8_t get_ir_oplen(void)
+// run one instruction
+void cpu_execute (void)
 {
-    return cpu_dynamic_metadata.oplen;
+    
 }
 
-address_mode_t get_ir_addr_mode(void)
-{
-    return cpu_dynamic_metadata.addr_mode;
-}
-
-uint8_t get_ir_indexed(uint8_t index)
-{
-    return cpu_dynamic_metadata.ir[index];
-}
-
-
-int main(void)
+int main (void)
 {   
     uint32_t start_address;
     uint32_t end_address;
@@ -174,14 +203,14 @@ int main(void)
 
     init_cpu(); 
     cpu_state.A.C = 0xABCD;
-    cpu_state.DPR = 0x9000;		// HAL would approve
+    cpu_state.DPR = 0x9000;     // HAL would approve
     cpu_state.PBR = 0x00;
     cpu_state.DBR = 0x00;
     cpu_state.X = 0x0101;
     cpu_state.Y = 0x0202;
     cpu_state.SP = 0x70FF;
     cpu_write(0xFFFC, 0x04);
-    cpu_write(0xFFFD, 0x2A);	// SOL-20 magic entry point
+    cpu_write(0xFFFD, 0x2A);    // SOL-20 magic entry point
     cpu_write(0x1234, 0x02);
     cpu_write(0x1235, 0x65);
     cpu_write(0x1236, 0x99);
@@ -215,7 +244,7 @@ int main(void)
     
     cpu_write(0x9131, 0x55);
     cpu_write(0x9132, 0xAA);
-     cpu_write(0x9031, 0x55);
+    cpu_write(0x9031, 0x55);
     cpu_write(0x9032, 0xAA);
     cpu_write(0x31, 0x55);
     cpu_write(0x32, 0xAA);
@@ -223,7 +252,18 @@ int main(void)
     cpu_write(0x7100, 0x02);
     cpu_write(0x7101, 0x18);
     
+    load_srec("allops_m1x1.s19", &start_address, &end_address);
+    SET_FLAG(M_FLAG);
+    SET_FLAG(X_FLAG);
+    set_cpu_type(CPU_65816);
+    SET_EMU(TRUE);
+    printf("****  EMULATUION  sa = %08X, ea=%08X ***** \n", start_address, end_address);
+    disasm(start_address, end_address);
     
+    
+    
+    set_cpu_type(CPU_65816);
+    SET_EMU(FALSE);
     load_srec("allops_m0x0.s19", &start_address, &end_address);
     CLR_FLAG(M_FLAG | X_FLAG);
     set_cpu_type(CPU_65816);

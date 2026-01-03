@@ -47,9 +47,10 @@ typedef struct {
 typedef struct {
     uint32_t cycle_counter;     // Cycle counter
     uint8_t oplen;              // Remember operation length
-    uint16_t fetch_pc;			// FIXME: PC at fetch time needed for integration for now
-    uint8_t fetch_pbr;			// FIXME: PBR at fetch time; remove after integration
+    uint16_t fetch_pc;          // FIXME: PC at fetch time needed for integration for now
+    uint8_t fetch_pbr;          // FIXME: PBR at fetch time; remove after integration
     address_mode_t  addr_mode;  // Remember address mode
+    uint32_t EA;                // calculated effective address
     uint8_t ir[4];              // Virtual instruction
                                 // register 0..oplen-1 valid
 } cpu_dynamic_metadata_t;
@@ -95,9 +96,16 @@ extern cpu_state_t cpu_state;
 extern char *get_mnemonic(uint8_t op);
 // The cpu_fetch() function populates the instruction register
 // and metadata as sharable metadata across modules.
-extern void cpu_fetch(uint32_t addr);
 uint8_t get_ir_opcode(void);    // The op-code just fetched
 extern uint8_t get_ir_oplen(void);  // The op-code length
 extern address_mode_t  get_ir_addr_mode(void);  // OP's address mode
 extern uint8_t get_ir_indexed(uint8_t index);   // Get any ir reg byte
+
+extern void set_EA(uint32_t ea);
+extern uint32_t get_EA (void);
+extern uint32_t make_linear_address(uint8_t bank, uint16_t pc);
+extern uint32_t get_cpu_address_linear(void);
+
+extern void cpu_fetch(void);
+extern void cpu_decode(void);
 
