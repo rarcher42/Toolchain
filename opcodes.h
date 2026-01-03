@@ -22,4 +22,6 @@ void sta(void);
 void stx(void);
 void sty(void);
 
+void adc(void);
+void sbc(void);
 void unimp(void);

@@ -52,7 +52,7 @@ typedef struct {
     uint8_t fetch_pbr;          // FIXME: PBR at fetch time; remove after integration
     address_mode_t  addr_mode;  // Remember address mode
     uint32_t EA;                // calculated effective address
-    uint16_t TEMP;				
+    uint16_t TEMP;              
     uint8_t TEMP_L;
     uint8_t ir[4];              // Virtual instruction
                                 // register 0..oplen-1 valid
@@ -90,6 +90,7 @@ extern uint8_t get_cpu_type(void);
 extern BOOL is_65816(void);
 BOOL is_6502(void);
 BOOL is_65C02(void);
+extern void change_vflag(uint16_t in1, uint16_t in2, uint16_t res, BOOL sixteen);
 extern uint16_t get_dpr(void);
 extern uint8_t get_dbr(void);
 extern uint8_t get_pbr(void);

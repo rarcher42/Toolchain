@@ -152,6 +152,103 @@ void sty (void)
     }
 }
 
+void adc (void)
+{
+    uint32_t sum;
+    uint16_t v1;
+    uint16_t v2;
+    
+    // FIXME: Handle D-flag
+    if (GET_FLAG(D_FLAG)) {
+        printf("\n*** ERROR: Unhandled decimal flag! ***\n");
+        exit(0);
+    }
+    if (GET_FLAG(M_FLAG) == 0) {
+        // 16 bit add
+        v1 = cpu_state.A.C;
+        load_temp16();
+        v2 = cpu_dynamic_metadata.TEMP;
+        sum = v1 + v2;
+        if (GET_FLAG(C_FLAG)) {
+            sum = sum + 1;
+        }
+        if (sum > 0xFFFF) {
+            SET_FLAG(C_FLAG);
+        } else {
+            CLR_FLAG(C_FLAG);
+        }
+        sum &= 0xFFFF;
+        change_vflag(v1, v2, sum, TRUE); 
+    } else {
+        // 8 bits
+        v1 = cpu_state.A.AL;
+        load_temp8();
+        v2 = cpu_dynamic_metadata.TEMP & 0xFF;
+        // FIXME: Handle 
+        cpu_state.A.AL = (cpu_dynamic_metadata.TEMP & 0xFF);
+        sum = v1 + v2;
+        if (GET_FLAG(C_FLAG)) {
+            sum = sum + 1;
+        }
+        if (sum > 0xFF) {
+            SET_FLAG(C_FLAG);
+        } else {
+            CLR_FLAG(C_FLAG);
+        }
+        sum &= 0xFF;
+        change_vflag(v1, v2, sum, FALSE);
+    }
+}
+
+void sbc (void)
+{
+    uint32_t sum;
+    uint16_t v1;
+    uint16_t v2;
+    
+    // FIXME: Handle D-flag
+    if (GET_FLAG(D_FLAG)) {
+        printf("\n*** ERROR: Unhandled decimal flag! ***\n");
+        exit(0);
+    }
+    if (GET_FLAG(M_FLAG) == 0) {
+        // 16 bit add
+        v1 = cpu_state.A.C;
+        load_temp16();
+        v2 = cpu_dynamic_metadata.TEMP;
+        sum = v1 - v2;
+        if (GET_FLAG(C_FLAG) == 0) {
+            sum = sum - 1;
+        }
+        if (sum > 0xFFFF) {
+            SET_FLAG(C_FLAG);	// FIXME: probably wrong
+        } else {
+            CLR_FLAG(C_FLAG);
+        }
+        sum &= 0xFFFF;
+        change_vflag(v1, v2, sum, TRUE); 
+    } else {
+        // 8 bits
+        v1 = cpu_state.A.AL;
+        load_temp8();
+        v2 = cpu_dynamic_metadata.TEMP & 0xFF;
+        // FIXME: Handle 
+        cpu_state.A.AL = (cpu_dynamic_metadata.TEMP & 0xFF);
+        sum = v1 - v2;
+        if (GET_FLAG(C_FLAG) == 0) {
+            sum = sum - 1;
+        }
+        if (sum > 0xFF) {
+            SET_FLAG(C_FLAG);	// FIXME: definitely wrong
+        } else {
+            CLR_FLAG(C_FLAG);
+        }
+        sum &= 0xFF;
+        change_vflag(v1, v2, sum, FALSE);
+    }
+}
+
+
 
 void stp (void)
 {
@@ -167,6 +264,6 @@ void brk (void)
 
 void unimp (void)
 {
-	printf("\nUnimplemented op-code %02X: aborting\n", get_ir_opcode());
-	cpu_dynamic_metadata.running = FALSE;
+    printf("\nUnimplemented op-code %02X: aborting\n", get_ir_opcode());
+    cpu_dynamic_metadata.running = FALSE;
 }

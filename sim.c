@@ -70,16 +70,7 @@ uint8_t GET_FLAG (uint8_t flag)
     return 0;
 }
 
-void change_nflag16(uint16_t val)
-{
-	if (val >= 0x8000) {
-		SET_FLAG(N_FLAG);
-	} else {
-		CLR_FLAG(N_FLAG);
-	}
-}
-
-void change_zflag(uint16_t val)
+void change_zflag(uint16_t val, BOOL sixteen)
 {
 	if (val == 0) {
 		SET_FLAG(Z_FLAG);
@@ -88,13 +79,41 @@ void change_zflag(uint16_t val)
 	}
 }
 
-void change_nflag8 (uint8_t val)
+void change_nflag (uint16_t val, BOOL sixteen)
 {
-	if (val >= 0x80) {
+	uint16_t msb_mask;
+	if (sixteen) {
+		msb_mask = 0x8000;
+	} else {
+		msb_mask = 0x80;
+	}
+	
+	if (val >= msb_mask) {
 		SET_FLAG(N_FLAG);
 	} else {
 		CLR_FLAG(N_FLAG);
 	}	
+}
+
+void change_vflag (uint16_t in1, uint16_t in2, uint16_t res, BOOL sixteen)
+{
+	BOOL n1, n2;	// Sign flags of two inputs operands
+	BOOL res1;		// Sign flag from result
+	uint16_t sign_mask;
+	
+	if (sixteen) {
+		sign_mask = 0x8000;
+	} else {
+		sign_mask = 0x80;
+	}
+	n1 = ((in1 & sign_mask) == 1);	// sign bit for in1
+	n2 = ((in2 & sign_mask) == 1);	// sign bit for in2
+	res1 = ((res & sign_mask) == 1);	// sign bit for result
+	if ((n1 == n2) && (res1 != n1)) {
+		SET_FLAG(V_FLAG);
+	} else {
+		CLR_FLAG(V_FLAG);
+	}
 }
 
 void SET_EMU (BOOL emu_mode)
@@ -314,19 +333,19 @@ uint8_t get_ir_indexed (uint8_t index)
 void load_temp8 (void)
 {
 	uint32_t dptr;
-	uint8_t temp;
+	uint16_t temp;
 	
 	dptr = get_EA();
 	if (dptr == 0xFFFFFFFF) {
-		temp = get_ir_indexed(1);
+		temp = (uint16_t) get_ir_indexed(1);
 		// printf("I8_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
 	} else {
-		temp = cpu_read(dptr);
+		temp = (uint16_t) cpu_read(dptr);
 		// printf("M8 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
 	}
-	cpu_dynamic_metadata.TEMP = temp & 0xFF;
-	change_nflag8(temp);
-	change_zflag(temp);
+	cpu_dynamic_metadata.TEMP = temp;
+	change_nflag(temp, FALSE);	// All loads and transfers set N and Z flags
+	change_zflag(temp, FALSE);
 }
 
 void load_temp16 (void)
@@ -346,8 +365,8 @@ void load_temp16 (void)
 		// printf("M16 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
 	}
 	cpu_dynamic_metadata.TEMP = temp;
-	change_nflag16(temp);
-	change_zflag(temp);
+	change_nflag(temp, TRUE);	// All load and transfers set N and Z flags
+	change_zflag(temp, TRUE);
 }
 
 void store_temp16 (void)
