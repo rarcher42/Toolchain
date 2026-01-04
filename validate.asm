@@ -1,23 +1,21 @@
 ; Assembled with 64TASS
-; 	64tass -c ~.asm -L ~.lst --intel-hex -o ~.hex
+;   64tass -c ~.asm -L ~.lst --intel-hex -o ~.hex
 ; or
 ;   64tass -c ~.asm -L ~.lst --s-record -o ~.hex 
 ; Put the above equates into an included file per peripheral or board
 
-        	.cpu    "65816"
+            .cpu    "6502"
 
-		.INCLUDE "cpu_symbols.inc"
+        .INCLUDE "cpu_symbols.inc"
 *   =   $30
 TMP    .byte   ?
 
-* 	= 	$2000
-START 		
-        SEP	#(X_FLAG | M_FLAG)		;  All 8 bit registers
-        CLD
-        .as
-        .xs
-		SEC					        ; Don't/Enter 65c02 emulation mode
-		XCE					        					
+*   =   $2000
+START   
+        SEI
+        LDX #$FF
+        TXS
+        CLD                                             
         NOP
         NOP
         NOP
@@ -41,9 +39,6 @@ START
 ; Output: Weekday in A (0=Sunday, 1=Monday, ..., 6=Saturday)
 
 WEKDAY:
-        SEP #(M_FLAG | X_FLAG)
-        .as
-        .xs
         CLD             ; RDA: original code has a bug.  Will not work if D flag set on entry!
         CPX #3          ; Year starts in March to bypass
         BCS MARCH       ; leap year problem
@@ -64,4 +59,6 @@ MARCH   EOR #$7F        ; Invert A so carry works right
 MOD7    ADC #7          ; Returns (A+3) modulo 7
         BCC MOD7        ; for A in 0..255
         RTS
-MTAB     .TEXT            1,5,6,3,1,5,3,0,4,2,6,4   	; Month offsets
+MTAB     .TEXT            1,5,6,3,1,5,3,0,4,2,6,4       ; Month offsets
+
+        

@@ -215,7 +215,7 @@ void dis2_current (void)
     printf("%s", outs);
     dump_registers();
 
-	 val = 0;
+     val = 0;
     if (oplen > 1) {
         val = from_hex(addr + 1, oplen - 1);
     }   
@@ -338,12 +338,12 @@ void dis2_current (void)
     } // switch addr_mode
     strcat(outs, param);
     ls = strlen(outs);
-    if (ls < DEBUG_TEXT_COL_START) {
-        for (i = 0; i < (DEBUG_TEXT_COL_START - ls); i++) {
+    if (ls < 22) {
+        for (i = 0; i < (22 - ls); i++) {
             strcat(outs, " ");
         }   // FIXME: inefficient AF but lazy; makes output readable :)
     }
-    printf("%s\n", outs);
+    printf("%s", outs);
     return;
 }
 

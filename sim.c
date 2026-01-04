@@ -45,6 +45,11 @@ BOOL is_65C02 (void)
 void set_cpu_type (uint8_t ct)
 {
     cpu_static_metadata.cpu_type = ct;
+    // Something of a kludge:  
+    if (ct != CPU_65816) {
+		SET_FLAG(M_FLAG);
+		SET_FLAG(X_FLAG);	// Everything's going to be 8 bits!
+	}
 }
 
 void SET_FLAG (uint8_t fset_mask)
@@ -240,14 +245,18 @@ void dump_registers (void)
         strcat(outs, "                ");
     }
     get_flags(param);
-    strcat(outs, param);\
-    if (is_65816()) {
+    strcat(outs, param);
+    if (is_6502()) {
+		strcat(outs, " [6]");
+	} else if (is_65C02()) {
+		strcat(outs, " [c]");
+	} else if (is_65816()) {
         if (IS_EMU()) {
             strcat(outs, " [E]");
         } else {
             strcat(outs, " [N]");
         }
-    }
+    } 
     printf("%s", outs);
 }
 
@@ -345,6 +354,7 @@ void load_temp8 (void)
         // printf("I8_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
     } else {
         temp = (uint16_t) cpu_read(dptr);
+        printf("RD[%04X]=%02X", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp & 0xFF;
         // printf("M8 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
     }
@@ -367,6 +377,7 @@ void load_temp16 (void)
         lsb = cpu_read(dptr);
         msb = cpu_read(dptr + 1);
         temp = (msb << 8) | lsb;
+        printf("RD[%04X]=%02X", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp;
         // printf("M16 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
     }
@@ -380,6 +391,7 @@ void store_temp16 (void)
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
     msb = (cpu_dynamic_metadata.TEMP >> 8) & 0xFF;
+    printf("WR[%04X]<=%04X", dptr, ((msb << 8) | lsb));
     cpu_write(dptr, lsb);
     cpu_write(dptr + 1, msb);
 }
@@ -391,7 +403,9 @@ void store_temp8 (void)
     
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
+    printf("WR[%04X]<=%02X", dptr, lsb);
     cpu_write(dptr, lsb);
+    
 }
 
 
@@ -464,16 +478,17 @@ void cpu_run(void)
     cpu_dynamic_metadata.running = TRUE;
     cpu_dynamic_metadata.instruction_counter = 0L;
     while (cpu_dynamic_metadata.running) {
+		printf("\n");
         cpu_fetch();  // Next instruction to "execute' (print)
         cpu_decode();
-        // We won't execute the instruction in this case :);
         dis2_current();
         cpu_execute();
         cpu_dynamic_metadata.instruction_counter += 1L;
-        if (cpu_dynamic_metadata.instruction_counter > 10000000) {
+        if (cpu_dynamic_metadata.instruction_counter > 1E9) {
             cpu_dynamic_metadata.running = FALSE;
         }
     } 
+    printf("\n\n");
     dump_registers();
 }
 
@@ -482,12 +497,6 @@ int main (void)
     uint32_t start_address;
     uint32_t end_address;
     
-    // int i;
-    
-    // for (i = 0; i < 0x80; i++) {
-    //    printf("$%02X=%s\n", i, get_mnemonic(i));
-    // }
-    // exit(0);
     init_vm();  // Create the infrastructure to support memory regions
     alloc_target_system_memory();   // Create the system memory blocks
     print_block_list();
@@ -497,15 +506,17 @@ int main (void)
     CLR_FLAG(X_FLAG);
     SET_FLAG(D_FLAG);
     CLR_FLAG(I_FLAG);
+    SET_EMU(TRUE);
     
+    set_cpu_type(CPU_6502);
     load_srec("validate.s19", &start_address, &end_address);
-    set_cpu_type(CPU_65816);
-    SET_EMU(FALSE);
+
+    
     printf("****  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     put_cpu_address_linear(start_address);
     cpu_run();
     // disasm(start_address, end_address);
-    printf("\n\n%ld instruction executed\n\n", get_cpu_instruction_count());
+    printf("\n\n%ld instructions executed\n\n", get_cpu_instruction_count());
     
     exit(0);
 }

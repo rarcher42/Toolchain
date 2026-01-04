@@ -197,7 +197,7 @@ void brk (void)
 {
 	uint8_t lsb, msb;
 	
-    printf("BRK - STOPPING!\n");
+    printf("\nBRK - STOPPING!\n");
     if (IS_EMU()) {
 		push16(cpu_state.SP + 2);
 		push8(cpu_state.flags | B_FLAG); // 65x02 doesn't set B flag, ONLY on stack copy!
@@ -310,7 +310,7 @@ void bvc (void)
 
 void jmp (void)
 {
-    cpu_state.PC = get_EA();
+    cpu_state.PC = get_EA() - 3;
 }
 
 void jsr (void)
