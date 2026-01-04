@@ -525,14 +525,14 @@ void tya (void)
     if (GET_FLAG(M_FLAG) == 0) {
         // 16 bits
         if (GET_FLAG(X_FLAG)) {
-            temp = cpu_state.X & 0xFF;
+            temp = cpu_state.Y & 0xFF;
         } else {
-            temp = cpu_state.X;
+            temp = cpu_state.Y;
         }
         cpu_state.A.C = temp;
         change_nzflag(temp, TRUE);
     } else {
-        temp = cpu_state.X & 0xFF;
+        temp = cpu_state.Y & 0xFF;
         cpu_state.A.AL = temp;
         change_nzflag(temp & 0xFF, FALSE);
         // 8 bits 
@@ -661,14 +661,30 @@ void plk (void)
 }
 
 
+void set_compare_borrow (uint32_t diff, BOOL sixteen)
+{
+    if (sixteen) {
+        if (diff > 0xFFFF) {
+            CLR_FLAG(C_FLAG);   // A - M caused a borrow!
+        } else {
+            SET_FLAG(C_FLAG);   // A - M resulted in no borrow
+        }
+    } else {
+        if (diff > 0xFF) {
+            CLR_FLAG(C_FLAG);   // A - M caused borrow!
+        } else {
+            SET_FLAG(C_FLAG);   // A - M no borrow
+        }
+    }
+}
+
 void cpx (void)
 {
     uint16_t reg;
     uint16_t op;
-    uint16_t diff;
+    uint32_t diff;
     uint8_t reg_l;
     uint8_t op_l;
-    uint8_t diff_l;
     
     if (GET_FLAG(X_FLAG) == 0) {
         // 16 bit compare
@@ -676,14 +692,16 @@ void cpx (void)
         load_temp16();
         op = cpu_dynamic_metadata.TEMP;
         diff = reg - op;
+        set_compare_borrow(diff, TRUE);
         change_nzflag(diff, TRUE);
     } else {
         // 8 bit compare
         reg_l = cpu_state.X & 0xFF;
         load_temp8();
         op_l = cpu_dynamic_metadata.TEMP & 0xFF;
-        diff_l = reg_l - op_l;
-        change_nzflag(diff_l, FALSE);
+        diff = reg_l - op_l;
+        set_compare_borrow(diff, FALSE);
+        change_nzflag(diff & 0xFF, FALSE);
     }
 }
 
@@ -691,10 +709,10 @@ void cpy (void)
 {
     uint16_t reg;
     uint16_t op;
-    uint16_t diff;
+    uint32_t diff;
     uint8_t reg_l;
     uint8_t op_l;
-    uint8_t diff_l;
+
     
     if (GET_FLAG(X_FLAG) == 0) {
         // 16 bit compare
@@ -702,14 +720,16 @@ void cpy (void)
         load_temp16();
         op = cpu_dynamic_metadata.TEMP;
         diff = reg - op;
+        set_compare_borrow(diff, TRUE);
         change_nzflag(diff, TRUE);
     } else {
         // 8 bit compare
         reg_l = cpu_state.Y & 0xFF;
         load_temp8();
         op_l = cpu_dynamic_metadata.TEMP & 0xFF;
-        diff_l = reg_l - op_l;
-        change_nzflag(diff_l, FALSE);
+        diff = reg_l - op_l;
+        set_compare_borrow(diff, FALSE);
+        change_nzflag(diff & 0xFF, FALSE);
     }
 }
 
@@ -717,10 +737,9 @@ void cmp (void)
 {
     uint16_t reg;
     uint16_t op;
-    uint16_t diff;
+    uint32_t diff;
     uint8_t reg_l;
     uint8_t op_l;
-    uint8_t diff_l;
     
     if (GET_FLAG(X_FLAG) == 0) {
         // 16 bit compare
@@ -728,14 +747,16 @@ void cmp (void)
         load_temp16();
         op = cpu_dynamic_metadata.TEMP;
         diff = reg - op;
+        set_compare_borrow(diff, TRUE);
         change_nzflag(diff, TRUE);
     } else {
         // 8 bit compare
         reg_l = cpu_state.A.AL & 0xFF;
         load_temp8();
         op_l = cpu_dynamic_metadata.TEMP & 0xFF;
-        diff_l = reg_l - op_l;
-        change_nzflag(diff_l, FALSE);
+        diff = reg_l - op_l;
+        set_compare_borrow(diff, FALSE);
+        change_nzflag(diff & 0xFF, FALSE);
     }
 }
 
@@ -1006,26 +1027,51 @@ void adc (void)
 
 uint8_t shift_left8 (uint8_t val)
 {
-	if ((val & 0x80) == 0) {
-		CLR_FLAG(C_FLAG);
-	} else {
-		SET_FLAG(C_FLAG);
-	}
-	val = val << 1;
-	change_nzflag(val, FALSE);
-	return val;
+    if ((val & 0x80) == 0) {
+        CLR_FLAG(C_FLAG);
+    } else {
+        SET_FLAG(C_FLAG);
+    }
+    val = val << 1;
+    change_nzflag(val, FALSE);
+    return val;
 }
 
 uint16_t shift_left16 (uint16_t val)
 {
-	if ((val & 0x8000) == 0) {
-		CLR_FLAG(C_FLAG);
-	} else {
-		SET_FLAG(C_FLAG);
-	}
-	val = val << 1;
-	change_nzflag(val, TRUE);
-	return val;	
+    if ((val & 0x8000) == 0) {
+        CLR_FLAG(C_FLAG);
+    } else {
+        SET_FLAG(C_FLAG);
+    }
+    val = val << 1;
+    change_nzflag(val, TRUE);
+    return val; 
+}
+
+
+uint16_t shift_right16 (uint16_t val)
+{
+    if ((val & 1) == 0) {
+        CLR_FLAG(C_FLAG);
+    } else {
+        SET_FLAG(C_FLAG);
+    }
+    val = val >> 1;
+    change_nzflag(val, TRUE);
+    return val; 
+}
+
+uint16_t shift_right8 (uint8_t val)
+{
+    if ((val & 1) == 0) {
+        CLR_FLAG(C_FLAG);
+    } else {
+        SET_FLAG(C_FLAG);
+    }
+    val = val >> 1;
+    change_nzflag(val, FALSE);
+    return val; 
 }
 
 // Unlike ADC, which always uses the accumulator for the destination,
@@ -1038,34 +1084,40 @@ uint16_t shift_left16 (uint16_t val)
 // and all other variants are read/modify/write to memory
 void lsr (void)
 {
-	address_mode_t address_mode;
-	uint16_t op;
-	uint8_t op_l;
-	
-	address_mode = get_ir_addr_mode();
-	if (address_mode == OP_A) {
-		// Accumulator source/destination
-		if (GET_FLAG(M_FLAG) == 0) {
-			op = cpu_state.A.C;
-			op = shift_left16(op);
-		} else {
-			op_l = cpu_state.A.AL;
-			op_l = shift_left8(op_l);
-		}
-	} else {
-		// Memory source/destination
-		if (GET_FLAG(M_FLAG) == 0) {
-			load_temp16();
-			op = cpu_dynamic_metadata.TEMP;
-			op = shift_left16(op);
-		} else {
-			load_temp8();
-			op_l = (cpu_dynamic_metadata.TEMP & 0xFF);
-			op_l = shift_left8(op_l);
-		}
-		
-	}
-	
+    address_mode_t address_mode;
+    uint16_t op;
+    uint8_t op_l;
+    
+    address_mode = get_ir_addr_mode();
+    if (address_mode == OP_A) {
+        // Accumulator source/destination
+        if (GET_FLAG(M_FLAG) == 0) {
+            op = cpu_state.A.C;
+            op = shift_right16(op);
+            cpu_state.A.C = op;
+        } else {
+            op_l = cpu_state.A.AL;
+            op_l = shift_right8(op_l);
+            cpu_state.A.AL = op_l;
+        }
+    } else {
+        // Memory source/destination
+        if (GET_FLAG(M_FLAG) == 0) {
+            load_temp16();
+            op = cpu_dynamic_metadata.TEMP;
+            op = shift_right16(op);
+            cpu_dynamic_metadata.TEMP = op;
+            store_temp16();
+        } else {
+            load_temp8();
+            op_l = (cpu_dynamic_metadata.TEMP & 0xFF);
+            op_l = shift_right8(op_l);
+            cpu_dynamic_metadata.TEMP = op_l & 0xFF;
+            store_temp8();  // Put it back into memory
+        }
+        
+    }
+    
 }
 
 void asl (void)
