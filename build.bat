@@ -1,3 +1,4 @@
+64tass -c validate.asm -L validate.lst --s-record -o validate.s19
 gcc -c -Wall opcodes.c
 gcc -c -Wall sim.c
 gcc -c -Wall calc_ea.c

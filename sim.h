@@ -47,13 +47,14 @@ typedef struct {
 typedef struct {
     BOOL running;               // CPU is running if TRUE, halted otherwise
     uint32_t cycle_counter;     // Cycle counter
+    unsigned long instruction_counter;
     uint8_t oplen;              // Remember operation length
     uint16_t fetch_pc;          // FIXME: PC at fetch time needed for integration for now
     uint8_t fetch_pbr;          // FIXME: PBR at fetch time; remove after integration
     address_mode_t  addr_mode;  // Remember address mode
     uint32_t EA;                // calculated effective address
     uint16_t TEMP;              
-    uint8_t TEMP_L;
+    // uint8_t TEMP_L;
     uint8_t ir[4];              // Virtual instruction
                                 // register 0..oplen-1 valid
 } cpu_dynamic_metadata_t;

@@ -436,19 +436,19 @@ void calc_ea_rel (void)
             base = (cpu_state.PC & 0xFFFF);
             if (offset < 0x80) {
                 // Forward reference
-                ea = (base + offset + 2) & 0xFFFF;  // (real PC has advanced by 2 since fetch)
+                ea = (base + offset) & 0xFFFF;  // (real PC has advanced by 2 since fetch)
             } else {
                 // Reverse reference
-                ea = (base - (0x100 - offset) + 2) & 0x00FFFF;
+                ea = (base - (0x100 - offset)) & 0xFFFF;
             }
         } else {
             base = (get_pbr() << 16) | (cpu_state.PC & 0x00FFFFFF);
             if (offset < 0x80) {
                 // Forward reference
-                ea = (base + offset + 2) & 0x00FFFFFF;  // (real PC has advanced by 2 since fetch)
+                ea = (base + offset) & 0x00FFFFFF;  // (REAL PC is already virtual PC+2 due to pipeline)
             } else {
                 // Reverse reference
-                ea = (base - (0x100 - offset) + 2) & 0x00FFFFFF;
+               ea = (base - (0x100 - offset)) & 0xFFFF; 
             }
         }
     } else {
@@ -456,10 +456,10 @@ void calc_ea_rel (void)
         base = cpu_state.PC & 0xFFFF;
         if (offset < 0x80) {
             // Forward reference
-            ea = (base + offset + 2) & 0xFFFF;  // (real PC has advanced by 2 since fetch)
+            ea = (base + offset) & 0xFFFF;  // (real PC has advanced by 2 since fetch)
         } else {
             // Reverse reference
-            ea = (base - (0x100 - offset) + 2) & 0x00FFFF;
+            ea = (base - (0x100 - offset)) & 0xFFFF;
         }
     }
     set_EA(ea);
@@ -481,19 +481,19 @@ void calc_ea_rel_l (void)
             base = (cpu_state.PC & 0xFFFF);
             if (offset < 0x8000) {
                 // Forward reference
-                ea = (base + offset + 3) & 0xFFFF;  // (real PC has advanced by 3 since fetch)
+                ea = (base + offset) & 0xFFFF;  // (real PC has advanced by 3 since fetch)
             } else {
                 // Reverse reference
-                ea = (base - (0x10000 - offset) + 3) & 0x00FFFF;
+                ea = (base - (0x10000 - offset)) & 0x00FFFF;
             }
         } else {
             base = (get_pbr() << 16) | (cpu_state.PC & 0x00FFFFFF);
             if (offset < 0x8000) {
                 // Forward reference
-                ea = (base + offset + 3) & 0x00FFFFFF;  // (real PC has advanced by 2 since fetch)
+                ea = (base + offset) & 0x00FFFFFF;  // (real PC has advanced by 2 since fetch)
             } else {
                 // Reverse reference
-                ea = (base - (0x10000 - offset) + 3) & 0x00FFFFFF;
+                ea = (base - (0x10000 - offset)) & 0x00FFFFFF;
             }
         }
     } else {
@@ -501,10 +501,10 @@ void calc_ea_rel_l (void)
         base = cpu_state.PC & 0xFFFF;
         if (offset < 0x8000) {
             // Forward reference
-            ea = (base + offset + 3) & 0xFFFF;  // (real PC has advanced by 2 since fetch)
+            ea = (base + offset) & 0xFFFF;  // (real PC has advanced by 2 since fetch)
         } else {
             // Reverse reference
-            ea = (base - (0x10000 - offset) + 3) & 0x00FFFF;
+            ea = (base - (0x10000 - offset)) & 0x00FFFF;
         }
     }
     set_EA(ea);
