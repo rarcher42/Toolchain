@@ -195,7 +195,26 @@ void stp (void)
 
 void brk (void)
 {
+	uint8_t lsb, msb;
+	
     printf("BRK - STOPPING!\n");
+    if (IS_EMU()) {
+		push16(cpu_state.SP + 2);
+		push8(cpu_state.flags | B_FLAG); // 65x02 doesn't set B flag, ONLY on stack copy!
+		SET_FLAG(I_FLAG);
+		lsb = cpu_read(0xFFFE);
+		msb = cpu_read(0xFFFF);
+		cpu_state.PC = (msb << 8) | lsb;
+	} else {
+		push8(cpu_state.PBR);
+		push16(cpu_state.SP + 2);
+		push8(cpu_state.flags);
+		SET_FLAG(I_FLAG);
+		cpu_state.PBR = 0;
+		lsb = cpu_read(0xFFE6);
+		msb = cpu_read(0xFFE7);
+		cpu_state.PC = (msb << 8) | lsb;
+	}
     cpu_dynamic_metadata.running = FALSE;
 }
 
@@ -450,7 +469,13 @@ void tsx (void)
 void txs (void)
 {
     if (GET_FLAG(X_FLAG)) {
-        cpu_state.SP = 0x100 | (cpu_state.X & 0xFF);
+		// 8 bit mode, Native, put 00xx into SP
+		// reference pg. 518 Programming the 65816..
+		// by Western Design Center TXS page
+		cpu_state.SP = cpu_state.X & 0xFF;
+		if (IS_EMU()) {
+			cpu_state.SP |= 0x100;
+		}
     } else {
         cpu_state.SP = cpu_state.X;
     }

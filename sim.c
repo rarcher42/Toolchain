@@ -194,7 +194,9 @@ void dump_registers (void)
 {
     char param[32];
     char outs[128];
-
+    
+    outs[0] = (char) 0;
+    /*
     if (is_65816()) {
         sprintf(param, "%02X:%04X ", cpu_state.PBR, cpu_state.PC);
         strcpy(outs, param);
@@ -202,6 +204,7 @@ void dump_registers (void)
         sprintf(param, "%04X    ", cpu_state.PC);
     }
     strcpy(outs, param);
+    */
     
     if (is_65816()) {
         if (GET_FLAG(M_FLAG)) {
@@ -471,6 +474,7 @@ void cpu_run(void)
             cpu_dynamic_metadata.running = FALSE;
         }
     } 
+    dump_registers();
 }
 
 int main (void)
@@ -489,10 +493,12 @@ int main (void)
     print_block_list();
 
     init_cpu(); 
+    CLR_FLAG(M_FLAG);
+    CLR_FLAG(X_FLAG);
+    SET_FLAG(D_FLAG);
+    CLR_FLAG(I_FLAG);
     
     load_srec("validate.s19", &start_address, &end_address);
-    SET_FLAG(M_FLAG);
-    SET_FLAG(X_FLAG);
     set_cpu_type(CPU_65816);
     SET_EMU(FALSE);
     printf("****  sa = %08X, ea=%08X ***** \n", start_address, end_address);

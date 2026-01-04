@@ -9,6 +9,7 @@ typedef uint8_t BOOL;
 #define V_FLAG 0x40
 #define M_FLAG 0x20
 #define X_FLAG 0x10
+#define B_FLAG 0x10
 #define D_FLAG 0x08
 #define I_FLAG 0x04
 #define Z_FLAG 0x02

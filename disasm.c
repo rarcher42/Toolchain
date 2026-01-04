@@ -219,7 +219,7 @@ void dis2_current (void)
     if (oplen > 1) {
         val = from_hex(addr + 1, oplen - 1);
     }   
-    sprintf(outs, "%s ", get_mnemonic(op));
+    sprintf(outs, "    %s ", get_mnemonic(op));
     param[0] = (char) 0;
     switch((int) addr_mode) {
     case OP_NONE:

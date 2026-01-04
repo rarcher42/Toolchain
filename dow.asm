@@ -13,15 +13,12 @@ TMP    .byte   ?
 
 * 	= 	$2000
 START 		
-		SEI
         SEP	#(X_FLAG | M_FLAG)		;  All 8 bit registers
         CLD
         .as
         .xs
 		SEC					        ; Don't/Enter 65c02 emulation mode
-		XCE					        ; 
-		;LDX	#$FF			        ; Set 16bit SP to usable RAMtop
-		;TXS					
+		XCE					        					
         NOP
         NOP
         NOP

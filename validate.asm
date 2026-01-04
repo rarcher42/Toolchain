@@ -7,28 +7,24 @@
         	.cpu    "65816"
 
 		.INCLUDE "cpu_symbols.inc"
-
 *   =   $30
 TMP    .byte   ?
 
 * 	= 	$2000
 START 		
-		SEI
         SEP	#(X_FLAG | M_FLAG)		;  All 8 bit registers
         CLD
         .as
         .xs
-        LDX	#$FF
-        TXS
-		CLC					        ; Don't/Enter 65c02 emulation mode
-		XCE					       					
+		SEC					        ; Don't/Enter 65c02 emulation mode
+		XCE					        					
         NOP
         NOP
         NOP
-        LDY #125                    ; 2025
-        LDX #12                     ; December
-        LDA #25                     ; 25th
-        JSR WEKDAY                  ; Get the day of the Wek    
+        LDY #125                   ; YR: 1900 = 0 2000 = 100 2026 = 126
+        LDX #12                    ; Month
+        LDA #25                    ; Day of month
+        JSR WEKDAY                 ; Get the day of the Wek    
         BRK
 
 ; This routine works for any date from 1900-03-01 to 2155-12-31.
@@ -69,4 +65,3 @@ MOD7    ADC #7          ; Returns (A+3) modulo 7
         BCC MOD7        ; for A in 0..255
         RTS
 MTAB     .TEXT            1,5,6,3,1,5,3,0,4,2,6,4   	; Month offsets
-
