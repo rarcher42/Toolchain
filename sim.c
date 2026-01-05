@@ -499,7 +499,7 @@ int main (void)
 {   
     uint32_t start_address;
     uint32_t end_address;
-
+    
     init_vm();  // Create the infrastructure to support memory regions
     alloc_target_system_memory();   // Create the system memory blocks
     print_block_list();

@@ -1152,10 +1152,8 @@ uint8_t bcd_add8 (uint8_t x, uint8_t y, uint8_t c_in)
         sum = (sum << 4) | result[i-1];
     }
     if (c_in) {
-        printf("\nCARRY OUT!\n");
         SET_FLAG(C_FLAG);
     } else {
-        printf("\nno carry out\n");
         CLR_FLAG(C_FLAG);
     }
     return sum;
@@ -1184,10 +1182,8 @@ uint16_t bcd_add16 (uint8_t x, uint8_t y, uint8_t c_in)
         sum = (sum << 4) | result[i-1];
     }
     if (c_in) {
-        printf("\nCARRY OUT!\n");
         SET_FLAG(C_FLAG);
     } else {
-        printf("\nno carry out\n");
         CLR_FLAG(C_FLAG);
     }
     return sum;
@@ -1231,10 +1227,8 @@ uint8_t bcd_sub8 (uint8_t x, uint8_t y, uint8_t c_in)
         sum = (sum << 4) | result[i-1];
     }
     if (c_in) {
-        printf("\nBORROW OUT!\n");
         CLR_FLAG(C_FLAG);
     } else {
-        printf("\nno borrow out\n");
         SET_FLAG(C_FLAG);
     }
     return sum;
@@ -1263,10 +1257,8 @@ uint8_t bcd_sub16 (uint8_t x, uint8_t y, uint8_t c_in)
         sum = (sum << 4) | result[i-1];
     }
     if (c_in) {
-        printf("\nBORROW OUT!\n");
         CLR_FLAG(C_FLAG);
     } else {
-        printf("\nno borrow out\n");
         SET_FLAG(C_FLAG);
     }
     return sum;
@@ -1291,13 +1283,7 @@ void adc (void)
         load_temp16();
         v2 = cpu_dynamic_metadata.TEMP;
         if (GET_FLAG(D_FLAG)) {
-            
             sum = bcd_add16(v1, v2, c_in);
-            if (sum > 0x9999) {
-                SET_FLAG(C_FLAG);
-            } else {
-                CLR_FLAG(C_FLAG);
-            }
         } else {
             sum = v1 + v2 + c_in;
             if (sum > 0xFFFF) {
@@ -1317,11 +1303,6 @@ void adc (void)
         v2 = cpu_dynamic_metadata.TEMP & 0xFF;
         if (GET_FLAG(D_FLAG)) {
             sum = bcd_add8(v1, v2, c_in);
-            if (sum > 0x99) {
-                SET_FLAG(C_FLAG);
-            } else {
-                CLR_FLAG(C_FLAG);
-            }
         } else {
             sum = v1 + v2 + c_in;
             if (sum > 0xFF) {
@@ -1352,11 +1333,6 @@ void sbc (void)
         v2 = cpu_dynamic_metadata.TEMP;
         if (GET_FLAG(D_FLAG)) {
             sum = bcd_sub16(v1, v2, borrow_in);
-            if (sum > 0x9999) {
-                CLR_FLAG(C_FLAG);
-            } else {
-                SET_FLAG(C_FLAG);
-            }
         } else {
             sum = v1 - v2 - borrow_in;
             if (sum > 0xFFFF) {
@@ -1376,11 +1352,6 @@ void sbc (void)
         v2 = cpu_dynamic_metadata.TEMP & 0xFF;
         if (GET_FLAG(D_FLAG)) {
             sum = bcd_sub8(v1, v2, borrow_in);
-            if (sum > 0x9999) {
-                CLR_FLAG(C_FLAG);
-            } else {
-                SET_FLAG(C_FLAG);
-            }
         } else {
             sum = v1 - v2 - borrow_in;
             if (sum > 0xFF) {

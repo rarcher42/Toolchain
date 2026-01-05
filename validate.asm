@@ -25,7 +25,16 @@ START
 		SEI
         LDX #$FF
         TXS
-        CLD   
+        LDA	#$99
+		SED
+L1LOL	SEC
+		SBC	#$01
+		BCS	L1LOL
+		LDA #$00
+L2LOL	CLC
+		ADC	#$01
+		BCC	L2LOL
+		CLD
 		JMP	CALCDOW
 		BRK
 CONT1	
