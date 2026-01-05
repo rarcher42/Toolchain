@@ -24,7 +24,7 @@ op_tbl opcode_table[] = {
 {"ORA", AL, LEN2,       OP_ZP_XI,       ora},       //$01
 {"COP", NB, LEN2,       OP_IMM,         unimp},     //$02
 {"ORA", NB, LEN2,       OP_SR,          ora},       //$03
-{"TSB", N2, LEN2,       OP_ZP,          unimp},     //$04
+{"TSB", N2, LEN2,       OP_ZP,          tsb},     	//$04
 {"ORA", AL, LEN2,       OP_ZP,          ora},       //$05
 {"ASL", AL, LEN2,       OP_ZP,          asl},       //$06
 {"ORA", NB, LEN2,       OP_ZP_IND_L,    ora},       //$07
@@ -32,7 +32,7 @@ op_tbl opcode_table[] = {
 {"ORA", AL, LEN2|M_A,   OP_IMM,         ora},       //$09
 {"ASL", AL, LEN1,       OP_A,           asl},       //$0A
 {"PHD", NB, LEN1,       OP_STK,         phd},       //$0B
-{"TSB", N2, LEN3,       OP_ABS,         unimp},     //$0C
+{"TSB", N2, LEN3,       OP_ABS,         tsb},     	//$0C
 {"ORA", AL, LEN3,       OP_ABS,         ora},       //$0D
 {"ASL", AL, LEN3,       OP_ABS,         asl},       //$0E
 {"ORA", NB, LEN4,       OP_ABS_L,       ora},       //$0F
@@ -40,7 +40,7 @@ op_tbl opcode_table[] = {
 {"ORA", AL, LEN2,       OP_ZP_IY,       ora},       //$11
 {"ORA", N2, LEN2,       OP_ZP_IND,      ora},       //$12
 {"ORA", NB, LEN2,       OP_SR_IY,       ora},       //$13
-{"TRB", N2, LEN2,       OP_ZP,          unimp},     //$14
+{"TRB", N2, LEN2,       OP_ZP,          trb},     	//$14
 {"ORA", AL, LEN2,       OP_ZP_X,        ora},       //$15
 {"ASL", AL, LEN2,       OP_ZP_X,        asl},       //$16
 {"ORA", NB, LEN2,       OP_ZP_IY_L,     ora},       //$17
@@ -48,7 +48,7 @@ op_tbl opcode_table[] = {
 {"ORA", AL, LEN3,       OP_ABS_Y,       ora},       //$19
 {"INC", N2, LEN1,       OP_A,           inc},       //$1A
 {"TCS", NB, LEN1,       OP_NONE,        tcs},       //$1B
-{"TRB", N2, LEN3,       OP_ABS,         unimp},     //$1C
+{"TRB", N2, LEN3,       OP_ABS,         trb},     	//$1C
 {"ORA", AL, LEN3,       OP_ABS_X,       ora},       //$1D
 {"ASL", AL, LEN3,       OP_ABS_X,       asl},       //$1E
 {"ORA", NB, LEN4,       OP_ABS_X_L,     ora},       //$1F
@@ -120,7 +120,7 @@ op_tbl opcode_table[] = {
 {"ADC", AL, LEN2,       OP_ZP_XI,       adc},       //$61
 {"PER", NB, LEN3,       OP_REL_L,       unimp},     //$62
 {"ADC", NB, LEN2,       OP_SR,          adc},       //$63
-{"STZ", N2, LEN2,       OP_ZP,          unimp},     //$64
+{"STZ", N2, LEN2,       OP_ZP,          stz},       //$64
 {"ADC", AL, LEN2,       OP_ZP,          adc},       //$65
 {"ROR", AL, LEN2,       OP_ZP,          ror},       //$66
 {"ADC", NB, LEN2,       OP_ZP_IND_L,    adc},       //$67
@@ -136,7 +136,7 @@ op_tbl opcode_table[] = {
 {"ADC", AL, LEN2,       OP_ZP_IY,       adc},       //$71
 {"ADC", AL, LEN2,       OP_ZP_IND,      adc},       //$72
 {"ADC", NB, LEN2,       OP_SR_IY,       adc},       //$73
-{"STZ", N2, LEN2,       OP_ZP_X,        unimp},     //$74
+{"STZ", N2, LEN2,       OP_ZP_X,        stz},       //$74
 {"ADC", AL, LEN2,       OP_ZP_X,        adc},       //$75
 {"ROR", AL, LEN2,       OP_ZP_X,        ror},       //$76
 {"ADC", NB, LEN2,       OP_ZP_IY_L,     adc},       //$77
@@ -176,9 +176,9 @@ op_tbl opcode_table[] = {
 {"STA", AL, LEN3,       OP_ABS_Y,       sta},       //$99
 {"TXS", AL, LEN1,       OP_NONE,        txs},       //$9A
 {"TXY", NB, LEN1,       OP_NONE,        txy},       //$9B
-{"STZ", N2, LEN3,       OP_ABS,         unimp},     //$9C
+{"STZ", N2, LEN3,       OP_ABS,         stz},       //$9C
 {"STA", AL, LEN3,       OP_ABS_X,       sta},       //$9D
-{"STZ", N2, LEN3,       OP_ABS_X,       unimp},     //$9E
+{"STZ", N2, LEN3,       OP_ABS_X,       stz},       //$9E
 {"STA", NB, LEN4,       OP_ABS_X_L,     sta},       //$9F
 {"LDY", AL, LEN2|X_A,   OP_IMM,         ldy},       //$A0
 {"LDA", AL, LEN2,       OP_ZP_XI,       lda},       //$A1
@@ -255,7 +255,7 @@ op_tbl opcode_table[] = {
 {"INX", AL, LEN1,       OP_NONE,        inx},       //$E8
 {"SBC", AL, LEN2|M_A,   OP_IMM,         sbc},       //$E9
 {"NOP", AL, LEN1,       OP_NONE,        nop},       //$EA
-{"XBA", NB, LEN1,       OP_NONE,        unimp},     //$EB
+{"XBA", NB, LEN1,       OP_NONE,        xba},       //$EB
 {"INC", AL, LEN3,       OP_ABS,         inc},       //$EC
 {"SBC", AL, LEN3,       OP_ABS,         sbc},       //$ED
 {"INC", AL, LEN3,       OP_ABS,         inc},       //$EE

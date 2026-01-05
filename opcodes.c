@@ -10,6 +10,16 @@
 #include "calc_ea.h"
 #include "opcodes.h"
 
+
+void change_zflag(uint16_t val)
+{
+    if (val == 0) {
+        SET_FLAG(Z_FLAG);
+    } else {
+        CLR_FLAG(Z_FLAG);
+    }
+}
+
 // Many instructions set N and Z flag by value.
 // N is set the MSB of result, 
 // Z is set by whether the result is zero
@@ -23,11 +33,7 @@ void change_nzflag(uint16_t val, BOOL sixteen)
         mask = 0x80;
     }
     
-    if (val == 0) {
-        SET_FLAG(Z_FLAG);
-    } else {
-        CLR_FLAG(Z_FLAG);
-    }
+    change_zflag(val);
     
     if ((val & mask) == 0) {
         CLR_FLAG(N_FLAG);
@@ -797,6 +803,16 @@ void cmp (void)
     }
 }
 
+void xba (void)
+{
+    uint8_t temp;
+    
+    temp = cpu_state.A.B;
+    cpu_state.A.B = cpu_state.A.AL;
+    cpu_state.A.AL = temp;
+    change_nzflag(temp, FALSE);
+}
+
 void lda (void)
 {
     if (GET_MSIZE() == 0) {
@@ -837,6 +853,53 @@ void ldy (void)
     }
 }
 
+void tsb (void)
+{
+    uint16_t v;
+    uint8_t v_l;
+    
+    if (GET_MSIZE() == 0) {
+        load_temp16();
+        v = cpu_dynamic_metadata.TEMP;
+        v |= cpu_state.A.C;
+        cpu_dynamic_metadata.TEMP = v;
+        store_temp16();
+        v = v & cpu_state.A.C;
+        change_zflag(v);
+    } else {
+        load_temp8();
+        v_l = cpu_dynamic_metadata.TEMP & 0xFF;
+        v_l |= cpu_state.A.AL;
+        cpu_dynamic_metadata.TEMP = v_l;
+        store_temp8();
+        v_l = v_l & cpu_state.A.AL;
+        change_zflag(v_l);
+    }
+}
+
+void trb (void)
+{
+    uint16_t v;
+    uint8_t v_l;
+    
+    if (GET_MSIZE() == 0) {
+        load_temp16();
+        v = cpu_dynamic_metadata.TEMP;
+        v &= ~cpu_state.A.C;
+        cpu_dynamic_metadata.TEMP = v;
+        store_temp16();
+        v = v & cpu_state.A.C;
+        change_zflag(v);
+    } else {
+        load_temp8();
+        v_l = cpu_dynamic_metadata.TEMP & 0xFF;
+        v_l &= (~cpu_state.A.AL) & 0xFF;
+        cpu_dynamic_metadata.TEMP = v_l;
+        store_temp8();
+        v_l = v_l & cpu_state.A.AL;
+        change_zflag(v_l);
+    }
+}
 
 void sta (void)
 {   
@@ -845,6 +908,17 @@ void sta (void)
         store_temp16();
     } else {
         cpu_dynamic_metadata.TEMP = (cpu_state.A.AL & 0xFF);
+        store_temp8();
+    }
+}
+
+void stz (void)
+{   
+    if (GET_MSIZE() == 0) {
+        cpu_dynamic_metadata.TEMP = (uint16_t) 0;
+        store_temp16();
+    } else {
+        cpu_dynamic_metadata.TEMP = (uint8_t) 0;
         store_temp8();
     }
 }
@@ -1042,160 +1116,160 @@ void ora (void)
 
 uint8_t bcd_add4 (uint8_t x1, uint8_t y1, uint8_t c_in) 
 {
-	uint8_t sum;
-	uint8_t x, y;
-	
-	x = x1 & 0xF;
-	y = y1 & 0xF;
-	
-	sum = x + y + c_in;
-	if (sum > 9) {
-		sum += 6;	// Decimal adjust
-	}
-	return sum;	// Note: caller must deduce carry out, mask out b0-b3
+    uint8_t sum;
+    uint8_t x, y;
+    
+    x = x1 & 0xF;
+    y = y1 & 0xF;
+    
+    sum = x + y + c_in;
+    if (sum > 9) {
+        sum += 6;   // Decimal adjust
+    }
+    return sum; // Note: caller must deduce carry out, mask out b0-b3
 }
 
 uint8_t bcd_add8 (uint8_t x, uint8_t y, uint8_t c_in)
 {
-	int i;
-	uint8_t sum;
-	uint8_t result[2];	// Result nibbles here
-	uint8_t digit;
-	
-	for (i = 0; i < 2; i++) {
-		digit = bcd_add4(x & 0xF, y & 0xF, c_in);
-		if (digit > 9) {
-			c_in = 1;
-		} else {
-			c_in = 0;
-		}
-		result[i] = digit & 0xF;
-		x = x >> 4;
-		y = y >> 4;
-	}
-	
-	for (i = 2; i > 0; --i) {
-		sum = (sum << 4) | result[i-1];
-	}
-	if (c_in) {
-		printf("\nCARRY OUT!\n");
-		SET_FLAG(C_FLAG);
-	} else {
-		printf("\nno carry out\n");
-		CLR_FLAG(C_FLAG);
-	}
-	return sum;
+    int i;
+    uint8_t sum;
+    uint8_t result[2];  // Result nibbles here
+    uint8_t digit;
+    
+    for (i = 0; i < 2; i++) {
+        digit = bcd_add4(x & 0xF, y & 0xF, c_in);
+        if (digit > 9) {
+            c_in = 1;
+        } else {
+            c_in = 0;
+        }
+        result[i] = digit & 0xF;
+        x = x >> 4;
+        y = y >> 4;
+    }
+    
+    for (i = 2; i > 0; --i) {
+        sum = (sum << 4) | result[i-1];
+    }
+    if (c_in) {
+        printf("\nCARRY OUT!\n");
+        SET_FLAG(C_FLAG);
+    } else {
+        printf("\nno carry out\n");
+        CLR_FLAG(C_FLAG);
+    }
+    return sum;
 }
 
 uint16_t bcd_add16 (uint8_t x, uint8_t y, uint8_t c_in)
 {
-	int i;
-	uint16_t sum;
-	uint8_t result[4];	// Result nibbles here
-	uint8_t digit;
-	
-	for (i = 0; i < 4; i++) {
-		digit = bcd_add4(x & 0xF, y & 0xF, c_in);
-		if (digit > 9) {
-			c_in = 1;
-		} else {
-			c_in = 0;
-		}
-		result[i] = digit & 0xF;
-		x = x >> 4;
-		y = y >> 4;
-	}
-	
-	for (i = 4; i > 0; --i) {
-		sum = (sum << 4) | result[i-1];
-	}
-	if (c_in) {
-		printf("\nCARRY OUT!\n");
-		SET_FLAG(C_FLAG);
-	} else {
-		printf("\nno carry out\n");
-		CLR_FLAG(C_FLAG);
-	}
-	return sum;
+    int i;
+    uint16_t sum;
+    uint8_t result[4];  // Result nibbles here
+    uint8_t digit;
+    
+    for (i = 0; i < 4; i++) {
+        digit = bcd_add4(x & 0xF, y & 0xF, c_in);
+        if (digit > 9) {
+            c_in = 1;
+        } else {
+            c_in = 0;
+        }
+        result[i] = digit & 0xF;
+        x = x >> 4;
+        y = y >> 4;
+    }
+    
+    for (i = 4; i > 0; --i) {
+        sum = (sum << 4) | result[i-1];
+    }
+    if (c_in) {
+        printf("\nCARRY OUT!\n");
+        SET_FLAG(C_FLAG);
+    } else {
+        printf("\nno carry out\n");
+        CLR_FLAG(C_FLAG);
+    }
+    return sum;
 }
 
 uint8_t bcd_sub4 (uint8_t x1, uint8_t y1, uint8_t b_in) 
 {
-	uint8_t diff;
-	uint8_t x, y;
-	
-	x = x1 & 0xF;
-	y = y1 & 0xF;
-	
-	diff = x - y - b_in;
-	if (diff > 9) {
-		diff -= 6;	// Decimal adjust
-	}
-	return diff;	// Note: caller must deduce carry out, mask out b0-b3
+    uint8_t diff;
+    uint8_t x, y;
+    
+    x = x1 & 0xF;
+    y = y1 & 0xF;
+    
+    diff = x - y - b_in;
+    if (diff > 9) {
+        diff -= 6;  // Decimal adjust
+    }
+    return diff;    // Note: caller must deduce carry out, mask out b0-b3
 }
 
 uint8_t bcd_sub8 (uint8_t x, uint8_t y, uint8_t c_in)
 {
-	int i;
-	uint8_t sum;
-	uint8_t result[2];	// Result nibbles here
-	uint8_t digit;
-	
-	for (i = 0; i < 2; i++) {
-		digit = bcd_sub4(x & 0xF, y & 0xF, c_in);
-		if (digit > 9) {
-			c_in = 1;
-		} else {
-			c_in = 0;
-		}
-		result[i] = digit & 0xF;
-		x = x >> 4;
-		y = y >> 4;
-	}
-	
-	for (i = 2; i > 0; --i) {
-		sum = (sum << 4) | result[i-1];
-	}
-	if (c_in) {
-		printf("\nBORROW OUT!\n");
-		CLR_FLAG(C_FLAG);
-	} else {
-		printf("\nno borrow out\n");
-		SET_FLAG(C_FLAG);
-	}
-	return sum;
+    int i;
+    uint8_t sum;
+    uint8_t result[2];  // Result nibbles here
+    uint8_t digit;
+    
+    for (i = 0; i < 2; i++) {
+        digit = bcd_sub4(x & 0xF, y & 0xF, c_in);
+        if (digit > 9) {
+            c_in = 1;
+        } else {
+            c_in = 0;
+        }
+        result[i] = digit & 0xF;
+        x = x >> 4;
+        y = y >> 4;
+    }
+    
+    for (i = 2; i > 0; --i) {
+        sum = (sum << 4) | result[i-1];
+    }
+    if (c_in) {
+        printf("\nBORROW OUT!\n");
+        CLR_FLAG(C_FLAG);
+    } else {
+        printf("\nno borrow out\n");
+        SET_FLAG(C_FLAG);
+    }
+    return sum;
 }
 
 uint8_t bcd_sub16 (uint8_t x, uint8_t y, uint8_t c_in)
 {
-	int i;
-	uint16_t sum;
-	uint8_t result[4];	// Result nibbles here
-	uint8_t digit;
-	
-	for (i = 0; i < 4; i++) {
-		digit = bcd_sub4(x & 0xF, y & 0xF, c_in);
-		if (digit > 9) {
-			c_in = 1;
-		} else {
-			c_in = 0;
-		}
-		result[i] = digit & 0xF;
-		x = x >> 4;
-		y = y >> 4;
-	}
-	
-	for (i = 4; i > 0; --i) {
-		sum = (sum << 4) | result[i-1];
-	}
-	if (c_in) {
-		printf("\nBORROW OUT!\n");
-		CLR_FLAG(C_FLAG);
-	} else {
-		printf("\nno borrow out\n");
-		SET_FLAG(C_FLAG);
-	}
-	return sum;
+    int i;
+    uint16_t sum;
+    uint8_t result[4];  // Result nibbles here
+    uint8_t digit;
+    
+    for (i = 0; i < 4; i++) {
+        digit = bcd_sub4(x & 0xF, y & 0xF, c_in);
+        if (digit > 9) {
+            c_in = 1;
+        } else {
+            c_in = 0;
+        }
+        result[i] = digit & 0xF;
+        x = x >> 4;
+        y = y >> 4;
+    }
+    
+    for (i = 4; i > 0; --i) {
+        sum = (sum << 4) | result[i-1];
+    }
+    if (c_in) {
+        printf("\nBORROW OUT!\n");
+        CLR_FLAG(C_FLAG);
+    } else {
+        printf("\nno borrow out\n");
+        SET_FLAG(C_FLAG);
+    }
+    return sum;
 }
 
 void adc (void)
@@ -1206,10 +1280,10 @@ void adc (void)
     uint8_t c_in;
     
     if (GET_FLAG(C_FLAG)) {
-		c_in = 1;
-	} else {
-		c_in = 0;
-	}
+        c_in = 1;
+    } else {
+        c_in = 0;
+    }
   
     if (GET_MSIZE() == 0) {
         // 16 bit add
@@ -1217,21 +1291,21 @@ void adc (void)
         load_temp16();
         v2 = cpu_dynamic_metadata.TEMP;
         if (GET_FLAG(D_FLAG)) {
-			
-			sum = bcd_add16(v1, v2, c_in);
-			if (sum > 0x9999) {
-				SET_FLAG(C_FLAG);
-			} else {
-				CLR_FLAG(C_FLAG);
-			}
-		} else {
-			sum = v1 + v2 + c_in;
-			if (sum > 0xFFFF) {
-				SET_FLAG(C_FLAG);
-			} else {
-				CLR_FLAG(C_FLAG);
-			}
-		}
+            
+            sum = bcd_add16(v1, v2, c_in);
+            if (sum > 0x9999) {
+                SET_FLAG(C_FLAG);
+            } else {
+                CLR_FLAG(C_FLAG);
+            }
+        } else {
+            sum = v1 + v2 + c_in;
+            if (sum > 0xFFFF) {
+                SET_FLAG(C_FLAG);
+            } else {
+                CLR_FLAG(C_FLAG);
+            }
+        }
         sum &= 0xFFFF;
         cpu_state.A.C = sum;
         change_nzflag(sum, TRUE);
@@ -1242,20 +1316,20 @@ void adc (void)
         load_temp8();
         v2 = cpu_dynamic_metadata.TEMP & 0xFF;
         if (GET_FLAG(D_FLAG)) {
-			sum = bcd_add8(v1, v2, c_in);
-			if (sum > 0x99) {
-				SET_FLAG(C_FLAG);
-			} else {
-				CLR_FLAG(C_FLAG);
-			}
-		} else {
-			sum = v1 + v2 + c_in;
-			if (sum > 0xFF) {
-				SET_FLAG(C_FLAG);
-			} else {
-				CLR_FLAG(C_FLAG);
-			}
-		}
+            sum = bcd_add8(v1, v2, c_in);
+            if (sum > 0x99) {
+                SET_FLAG(C_FLAG);
+            } else {
+                CLR_FLAG(C_FLAG);
+            }
+        } else {
+            sum = v1 + v2 + c_in;
+            if (sum > 0xFF) {
+                SET_FLAG(C_FLAG);
+            } else {
+                CLR_FLAG(C_FLAG);
+            }
+        }
         sum &= 0xFF;
         cpu_state.A.AL = sum;
         change_nzflag(sum, FALSE);
@@ -1277,20 +1351,20 @@ void sbc (void)
         load_temp16();
         v2 = cpu_dynamic_metadata.TEMP;
         if (GET_FLAG(D_FLAG)) {
-			sum = bcd_sub16(v1, v2, borrow_in);
-			if (sum > 0x9999) {
-				CLR_FLAG(C_FLAG);
-			} else {
-				SET_FLAG(C_FLAG);
-			}
-		} else {
-			sum = v1 - v2 - borrow_in;
-			if (sum > 0xFFFF) {
-				CLR_FLAG(C_FLAG);   // > 2^16 means borrow occurred
-			} else {
-				SET_FLAG(C_FLAG);
-			}
-		}
+            sum = bcd_sub16(v1, v2, borrow_in);
+            if (sum > 0x9999) {
+                CLR_FLAG(C_FLAG);
+            } else {
+                SET_FLAG(C_FLAG);
+            }
+        } else {
+            sum = v1 - v2 - borrow_in;
+            if (sum > 0xFFFF) {
+                CLR_FLAG(C_FLAG);   // > 2^16 means borrow occurred
+            } else {
+                SET_FLAG(C_FLAG);
+            }
+        }
         sum &= 0xFFFF;
         cpu_state.A.C = sum;
         change_nzflag(sum, TRUE);
@@ -1301,20 +1375,20 @@ void sbc (void)
         load_temp8();
         v2 = cpu_dynamic_metadata.TEMP & 0xFF;
         if (GET_FLAG(D_FLAG)) {
-			sum = bcd_sub8(v1, v2, borrow_in);
-			if (sum > 0x9999) {
-				CLR_FLAG(C_FLAG);
-			} else {
-				SET_FLAG(C_FLAG);
-			}
-		} else {
-			sum = v1 - v2 - borrow_in;
-			if (sum > 0xFF) {
-				CLR_FLAG(C_FLAG);   // FIXME: definitely wrong
-			} else {
-				SET_FLAG(C_FLAG);
-			}
-		}
+            sum = bcd_sub8(v1, v2, borrow_in);
+            if (sum > 0x9999) {
+                CLR_FLAG(C_FLAG);
+            } else {
+                SET_FLAG(C_FLAG);
+            }
+        } else {
+            sum = v1 - v2 - borrow_in;
+            if (sum > 0xFF) {
+                CLR_FLAG(C_FLAG);   // FIXME: definitely wrong
+            } else {
+                SET_FLAG(C_FLAG);
+            }
+        }
         sum &= 0xFF;
         cpu_state.A.AL = sum;
         change_nzflag(sum, FALSE);

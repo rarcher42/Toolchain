@@ -44,6 +44,7 @@ void lda(void);
 void ldx(void);
 void ldy(void);
 void sta(void);
+void stz(void);
 void stx(void);
 void sty(void);
 
@@ -61,6 +62,7 @@ void txa(void);
 void tya(void);
 void txy(void);
 void tyx(void);
+void xba(void);
 
 // Simple stack ops
 void pha(void);
@@ -98,6 +100,8 @@ void asl(void);
 void rol(void);
 void ror(void);
 void bit(void);
+void tsb(void);
+void trb(void);
 
 void rti(void);
 uint8_t bcd_add8(uint8_t x1, uint8_t x2, uint8_t carry_in);

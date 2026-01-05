@@ -91,15 +91,6 @@ uint8_t GET_MSIZE (void)
     return 1;   // All non-65816s are 8 bits!
 }
 
-void change_zflag(uint16_t val, BOOL sixteen)
-{
-    if (val == 0) {
-        SET_FLAG(Z_FLAG);
-    } else {
-        CLR_FLAG(Z_FLAG);
-    }
-}
-
 void change_nflag (uint16_t val, BOOL sixteen)
 {
     uint16_t msb_mask;
