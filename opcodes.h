@@ -79,7 +79,7 @@ void plx(void);
 void ply(void);
 void plk(void);
 
-void andop(void);
+void anl(void);
 void eor(void);
 void ora(void);
 
@@ -91,5 +91,15 @@ void adc(void);
 void sbc(void);
 void unimp(void);
 
+void inc(void);
+void dec(void);
 void lsr(void);
+void asl(void);
+void rol(void);
+void ror(void);
+void bit(void);
 
+void rti(void);
+uint8_t bcd_add8(uint8_t x1, uint8_t x2, uint8_t carry_in);
+uint8_t bcd_sub4(uint8_t x1, uint8_t y1, uint8_t b_in);
+uint8_t bcd_sub8 (uint8_t x, uint8_t y, uint8_t c_in);

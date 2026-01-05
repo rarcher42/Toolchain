@@ -4,26 +4,68 @@
 ;   64tass -c ~.asm -L ~.lst --s-record -o ~.hex 
 ; Put the above equates into an included file per peripheral or board
 
-            .cpu    "6502"
+            .cpu    "w65c02"
 
         .INCLUDE "cpu_symbols.inc"
 *   =   $30
 TMP    .byte   ?
+*  	=	$0400
 
+* 	= 	$0500
+TBL1	.fill	256
+
+* 	= 	$0600
+TBL2	.fill	256
+
+
+JMPVEC	.word	?	
 *   =   $2000
-START   
-        SEI
+
+START	
+		SEI
         LDX #$FF
         TXS
-        CLD                                             
-        NOP
-        NOP
-        NOP
+        CLD   
+		JMP	CONT1
+		BRK
+CONT1	
+		
+		NOP
+		LDA	#<BEGINE
+		STA	JMPVEC
+		LDA	#>BEGINE
+		STA	JMPVEC+1
+		JMP	(JMPVEC)
+		BRK
+BEGINE	LDX	#$FC
+BLP1	TXA
+		STA	TBL1,X
+		STA	$00,X
+		INX
+		BNE	BLP1
+		LDY	#$FC
+VOOP	TYA
+		EOR #$FF
+		STA	TBL2,Y
+		INY
+		BNE	VOOP
+		LDX #$FC
+SOOP	LDA	TBL1,X
+		PHA
+		AND	TBL2,X
+		LDA	TBL1,X
+		ORA	TBL2,X
+		PLA
+		EOR	TBL2,X
+		STA	TBL1,X
+		INX
+		BNE	SOOP
+
+CALCDOW                              
         LDY #125                   ; YR: 1900 = 0 2000 = 100 2026 = 126
         LDX #12                    ; Month
         LDA #25                    ; Day of month
-        JSR WEKDAY                 ; Get the day of the Wek    
-        BRK
+        JSR WEKDAY                 ; Get the day of the Wek 
 
 ; This routine works for any date from 1900-03-01 to 2155-12-31.
 ; No range checking is done, so validate input before calling.

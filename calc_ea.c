@@ -133,7 +133,7 @@ void calc_ea_abs_x (void)
         } else {
             bank = get_dbr();
             ea = (bank << 16) | base;   
-            if (GET_FLAG(X_FLAG)) {
+            if (GET_XSIZE()) {
                 ea = ea + (cpu_state.X & 0xFF);
                 /* FIXME: confirm no bank wrap */
             } else {
@@ -182,7 +182,7 @@ void calc_ea_abs_y (void)
         } else {
             bank = get_dbr();
             ea = (bank << 16) | base;   
-            if (GET_FLAG(X_FLAG)) {
+            if (GET_XSIZE()) {
                 ea = ea + (cpu_state.Y & 0xFF);
                 /* FIXME: confirm no bank wrap */
             } else {
@@ -208,7 +208,7 @@ void calc_ea_abs_x_l (void)
     bank = get_ir_indexed(3);   // Bank
     base = (bank << 16) | (msb << 8) | lsb;
     if (is_65816()) {   
-        if (GET_FLAG(X_FLAG)) {
+        if (GET_XSIZE()) {
             ea = base + (cpu_state.X & 0xFF);
             /* FIXME: confirm no bank wrap */
         } else {
@@ -303,7 +303,7 @@ void calc_ea_zp_iy_l (void)
         if (IS_EMU()) {
             ea = ea + (cpu_state.Y & 0xFF);
         } else {
-            if (GET_FLAG(X_FLAG)) {
+            if (GET_XSIZE()) {
                 ea = ea + (cpu_state.Y & 0xFF);
             } else {
                 ea = ea + cpu_state.Y;
@@ -331,7 +331,7 @@ void calc_ea_zp_x (void)
             /* Emulation mode */
             ea = dpr + base + (cpu_state.X & 0xFF);
         } else {
-            if (GET_FLAG(X_FLAG)) {
+            if (GET_XSIZE()) {
                 ea = dpr + base + (cpu_state.X & 0xFF);
             } else {
                 ea = dpr + base + cpu_state.X;
@@ -380,7 +380,7 @@ void calc_ea_zp_y (void)
             /* Emulation mode */
             ea = dpr + base + (cpu_state.Y & 0xFF);
         } else {
-            if (GET_FLAG(X_FLAG)) {
+            if (GET_XSIZE()) {
                 ea = dpr + base + (cpu_state.Y & 0xFF);
             } else {
                 ea = dpr + base + cpu_state.Y;
@@ -410,7 +410,7 @@ void calc_ea_zp_iy (void)
         if (IS_EMU()) {
             ea = base + (cpu_state.Y & 0xFF);
         } else {
-            if (GET_FLAG(X_FLAG)) {
+            if (GET_XSIZE()) {
                 ea = ((page << 16) | base) + (cpu_state.Y & 0xFF);
             } else {
                 ea = ((page << 16) | base) + cpu_state.Y;
@@ -564,7 +564,7 @@ void calc_ea_sr_iy (void)
         if (IS_EMU()) {
             ea = ea + (cpu_state.Y & 0xFF);
         } else {
-            if (GET_FLAG(X_FLAG)) {
+            if (GET_XSIZE()) {
                 ea = ea + (cpu_state.Y & 0xFF);
             } else {
                 ea = ea + cpu_state.Y;

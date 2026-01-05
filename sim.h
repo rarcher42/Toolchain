@@ -86,6 +86,8 @@ extern void SET_FLAG (uint8_t fset_mask);
 extern void CLR_FLAG (uint8_t fres_mask);
 extern uint8_t GET_FLAGS(void);
 extern uint8_t GET_FLAG(uint8_t flag);
+extern uint8_t GET_MSIZE(void);
+extern uint8_t GET_XSIZE(void);
 extern uint8_t IS_EMU(void);
 extern void SET_EMU(uint8_t em);
 extern uint8_t get_cpu_type(void);

@@ -8,6 +8,7 @@
 #include "disasm.h"
 #include "sim.h"
 #include "calc_ea.h"
+#include "opcodes.h"
 
 cpu_state_t cpu_state;
 cpu_dynamic_metadata_t cpu_dynamic_metadata;
@@ -45,11 +46,6 @@ BOOL is_65C02 (void)
 void set_cpu_type (uint8_t ct)
 {
     cpu_static_metadata.cpu_type = ct;
-    // Something of a kludge:  
-    if (ct != CPU_65816) {
-		SET_FLAG(M_FLAG);
-		SET_FLAG(X_FLAG);	// Everything's going to be 8 bits!
-	}
 }
 
 void SET_FLAG (uint8_t fset_mask)
@@ -73,6 +69,26 @@ uint8_t GET_FLAG (uint8_t flag)
         return 1;
     }
     return 0;
+}
+
+uint8_t GET_XSIZE (void)
+{
+    // Replaces GET_FLAG(X_FLAG).  Returns 1 for 8 bits, 0 for 16 bits.
+    // Considers CPU type
+    if (get_cpu_type() == CPU_65816) {
+        return GET_FLAG(X_FLAG);
+    } 
+    return 1;   // All non-65816s are 8 bits!
+}
+
+uint8_t GET_MSIZE (void)
+{
+    // Replaces GET_FLAG(M_FLAG).  Returns 1 for 8 bits, 0 for 16 bits.
+    // Considers CPU type
+    if (get_cpu_type() == CPU_65816) {
+        return GET_FLAG(M_FLAG);
+    } 
+    return 1;   // All non-65816s are 8 bits!
 }
 
 void change_zflag(uint16_t val, BOOL sixteen)
@@ -212,7 +228,7 @@ void dump_registers (void)
     */
     
     if (is_65816()) {
-        if (GET_FLAG(M_FLAG)) {
+        if (GET_MSIZE()) {
             sprintf(param, "A=%02X B=%02X ", cpu_state.A.AL, cpu_state.A.B);
         } else {
             sprintf(param, "C=%04X    ", cpu_state.A.C);
@@ -222,7 +238,7 @@ void dump_registers (void)
     }
     strcat(outs, param);
         
-    if ((is_65816()) && (GET_FLAG(X_FLAG) == 0)) {
+    if ((is_65816()) && (GET_XSIZE() == 0)) {
         sprintf(param, "X=%04X Y=%04X ", cpu_state.X, cpu_state.Y);
     } else {
         sprintf(param, "X=%02X   Y=%02X   ", (cpu_state.X & 0xFF), (cpu_state.Y & 0xFF));
@@ -247,10 +263,10 @@ void dump_registers (void)
     get_flags(param);
     strcat(outs, param);
     if (is_6502()) {
-		strcat(outs, " [6]");
-	} else if (is_65C02()) {
-		strcat(outs, " [c]");
-	} else if (is_65816()) {
+        strcat(outs, " [6]");
+    } else if (is_65C02()) {
+        strcat(outs, " [c]");
+    } else if (is_65816()) {
         if (IS_EMU()) {
             strcat(outs, " [E]");
         } else {
@@ -266,12 +282,12 @@ void init_cpu (void)
     
     SET_EMU(FALSE);         // FUBAR for testing disasm only, should be TRUE
     set_cpu_type(CPU_65816);       // Not 6502, 65c02 at this time
-    cpu_state.A.C = 0;
-    cpu_state.X = 0;
-    cpu_state.Y = 0;
-    cpu_state.SP = 0x7EFF;  // Not really!
-    cpu_state.DBR = 0;
-    cpu_state.PBR = 0;
+    cpu_state.A.C = 0xAE35;
+    cpu_state.X = 0x88;
+    cpu_state.Y = 0x42;
+    cpu_state.SP = 0x19;  // Not really! IRL it's random so pick disaster to teach user
+    cpu_state.DBR = 0;  // By necessity
+    cpu_state.PBR = 0;  // By necessity
     cpu_state.DPR = 0x0000; // Probably
     new_pc = (cpu_read(VEC_RESET+1) & 0xFF) << 8;
     new_pc |= (cpu_read(VEC_RESET) & 0xFF);
@@ -351,12 +367,10 @@ void load_temp8 (void)
     if (dptr == 0xFFFFFFFF) {
         temp = (uint16_t) get_ir_indexed(1);
         cpu_dynamic_metadata.TEMP = temp & 0xFF;
-        // printf("I8_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
     } else {
         temp = (uint16_t) cpu_read(dptr);
-        printf("RD[%04X]=%02X", dptr, temp);
+        printf("RD[%04X]==%02X ", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp & 0xFF;
-        // printf("M8 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
     }
 }
 
@@ -372,14 +386,12 @@ void load_temp16 (void)
         // Immediate mode!
         temp = (get_ir_indexed(2) << 8) | get_ir_indexed(1);
         cpu_dynamic_metadata.TEMP = temp;
-        // printf("I16 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP); 
     } else {
         lsb = cpu_read(dptr);
         msb = cpu_read(dptr + 1);
         temp = (msb << 8) | lsb;
-        printf("RD[%04X]=%02X", dptr, temp);
+        printf("RD[%04X]==%02X ", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp;
-        // printf("M16 cpu_dynamic_metadata.TEMP = %04X\n", cpu_dynamic_metadata.TEMP);
     }
 }
 
@@ -391,7 +403,7 @@ void store_temp16 (void)
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
     msb = (cpu_dynamic_metadata.TEMP >> 8) & 0xFF;
-    printf("WR[%04X]<=%04X", dptr, ((msb << 8) | lsb));
+    printf("WR[%04X]<=%04X ", dptr, ((msb << 8) | lsb));
     cpu_write(dptr, lsb);
     cpu_write(dptr + 1, msb);
 }
@@ -403,7 +415,7 @@ void store_temp8 (void)
     
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
-    printf("WR[%04X]<=%02X", dptr, lsb);
+    printf("WR[%04X]<=%02X ", dptr, lsb);
     cpu_write(dptr, lsb);
     
 }
@@ -478,7 +490,7 @@ void cpu_run(void)
     cpu_dynamic_metadata.running = TRUE;
     cpu_dynamic_metadata.instruction_counter = 0L;
     while (cpu_dynamic_metadata.running) {
-		printf("\n");
+        printf("\n");
         cpu_fetch();  // Next instruction to "execute' (print)
         cpu_decode();
         dis2_current();
@@ -496,7 +508,7 @@ int main (void)
 {   
     uint32_t start_address;
     uint32_t end_address;
-    
+
     init_vm();  // Create the infrastructure to support memory regions
     alloc_target_system_memory();   // Create the system memory blocks
     print_block_list();
@@ -504,20 +516,18 @@ int main (void)
     init_cpu(); 
     CLR_FLAG(M_FLAG);
     CLR_FLAG(X_FLAG);
-    SET_FLAG(D_FLAG);
+    CLR_FLAG(D_FLAG);
     CLR_FLAG(I_FLAG);
     SET_EMU(TRUE);
     
-    set_cpu_type(CPU_6502);
+    set_cpu_type(CPU_65C02);
     load_srec("validate.s19", &start_address, &end_address);
 
-    
     printf("****  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     put_cpu_address_linear(start_address);
     cpu_run();
     // disasm(start_address, end_address);
     printf("\n\n%ld instructions executed\n\n", get_cpu_instruction_count());
-    
     exit(0);
 }
 

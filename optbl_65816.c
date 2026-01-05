@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "optbl_65816.h"
 #include "sim.h"
 #include "opcodes.h"
@@ -25,15 +26,15 @@ op_tbl opcode_table[] = {
 {"ORA", NB, LEN2,       OP_SR,          ora},       //$03
 {"TSB", N2, LEN2,       OP_ZP,          unimp},     //$04
 {"ORA", AL, LEN2,       OP_ZP,          ora},       //$05
-{"ASL", AL, LEN2,       OP_ZP,          unimp},     //$06
+{"ASL", AL, LEN2,       OP_ZP,          asl},       //$06
 {"ORA", NB, LEN2,       OP_ZP_IND_L,    ora},       //$07
 {"PHP", AL, LEN1,       OP_STK,         php},       //$08
 {"ORA", AL, LEN2|M_A,   OP_IMM,         ora},       //$09
-{"ASL", AL, LEN1,       OP_A,           unimp},     //$0A
+{"ASL", AL, LEN1,       OP_A,           asl},       //$0A
 {"PHD", NB, LEN1,       OP_STK,         phd},       //$0B
 {"TSB", N2, LEN3,       OP_ABS,         unimp},     //$0C
 {"ORA", AL, LEN3,       OP_ABS,         ora},       //$0D
-{"ASL", AL, LEN3,       OP_ABS,         unimp},     //$0E
+{"ASL", AL, LEN3,       OP_ABS,         asl},       //$0E
 {"ORA", NB, LEN4,       OP_ABS_L,       ora},       //$0F
 {"BPL", AL, LEN2,       OP_REL,         bpl},       //$10
 {"ORA", AL, LEN2,       OP_ZP_IY,       ora},       //$11
@@ -41,49 +42,49 @@ op_tbl opcode_table[] = {
 {"ORA", NB, LEN2,       OP_SR_IY,       ora},       //$13
 {"TRB", N2, LEN2,       OP_ZP,          unimp},     //$14
 {"ORA", AL, LEN2,       OP_ZP_X,        ora},       //$15
-{"ASL", AL, LEN2,       OP_ZP_X,        unimp},     //$16
+{"ASL", AL, LEN2,       OP_ZP_X,        asl},       //$16
 {"ORA", NB, LEN2,       OP_ZP_IY_L,     ora},       //$17
 {"CLC", AL, LEN1,       OP_NONE,        clc},       //$18
 {"ORA", AL, LEN3,       OP_ABS_Y,       ora},       //$19
-{"INC", N2, LEN1,       OP_A,           unimp},     //$1A
+{"INC", N2, LEN1,       OP_A,           inc},       //$1A
 {"TCS", NB, LEN1,       OP_NONE,        tcs},       //$1B
 {"TRB", N2, LEN3,       OP_ABS,         unimp},     //$1C
 {"ORA", AL, LEN3,       OP_ABS_X,       ora},       //$1D
-{"ASL", AL, LEN3,       OP_ABS_X,       unimp},     //$1E
+{"ASL", AL, LEN3,       OP_ABS_X,       asl},       //$1E
 {"ORA", NB, LEN4,       OP_ABS_X_L,     ora},       //$1F
 {"JSR", AL, LEN3,       OP_ABS,         jsr},       //$20
-{"AND", AL, LEN2,       OP_ZP_XI,       andop},     //$21
+{"AND", AL, LEN2,       OP_ZP_XI,       anl},       //$21
 {"JSL", NB, LEN4,       OP_ABS_L,       jsl},       //$22
-{"AND", NB, LEN2,       OP_SR,          andop},     //$23
-{"BIT", AL, LEN2,       OP_ZP,          unimp},     //$24
-{"AND", AL, LEN2,       OP_ZP,          andop},     //$25
-{"ROL", AL, LEN2,       OP_ZP,          unimp},     //$26
-{"AND", NB, LEN2,       OP_ZP_IND_L,    andop},     //$27
+{"AND", NB, LEN2,       OP_SR,          anl},       //$23
+{"BIT", AL, LEN2,       OP_ZP,          bit},       //$24
+{"AND", AL, LEN2,       OP_ZP,          anl},       //$25
+{"ROL", AL, LEN2,       OP_ZP,          rol},       //$26
+{"AND", NB, LEN2,       OP_ZP_IND_L,    anl},       //$27
 {"PLP", AL, LEN1,       OP_STK,         plp},       //$28
-{"AND", AL, LEN2|M_A,   OP_IMM,         andop},     //$29
-{"ROL", AL, LEN1,       OP_A,           unimp},     //$2A
+{"AND", AL, LEN2|M_A,   OP_IMM,         anl},       //$29
+{"ROL", AL, LEN1,       OP_A,           rol},       //$2A
 {"PLD", NB, LEN1,       OP_STK,         pld},       //$2B
-{"BIT", AL, LEN3,       OP_ABS,         unimp},     //$2C
-{"AND", AL, LEN3,       OP_ABS,         andop},     //$2D
-{"ROL", AL, LEN3,       OP_ABS,         unimp},     //$2E
-{"AND", NB, LEN4,       OP_ABS_L,       andop},     //$2F
+{"BIT", AL, LEN3,       OP_ABS,         bit},       //$2C
+{"AND", AL, LEN3,       OP_ABS,         anl},       //$2D
+{"ROL", AL, LEN3,       OP_ABS,         rol},       //$2E
+{"AND", NB, LEN4,       OP_ABS_L,       anl},       //$2F
 {"BMI", AL, LEN2,       OP_REL,         bmi},       //$30
-{"AND", AL, LEN2,       OP_ZP_IY,       andop},     //$31
-{"AND", N2, LEN2,       OP_ZP_IND,      andop},     //$32
-{"AND", NB, LEN2,       OP_SR_IY,       andop},     //$33
-{"BIT", N2, LEN2,       OP_ZP_X,        unimp},     //$34
-{"AND", AL, LEN2,       OP_ZP_X,        andop},     //$35
-{"ROL", AL, LEN2,       OP_ZP_X,        unimp},     //$36
-{"AND", NB, LEN2,       OP_ZP_IY_L,     andop},     //$37
+{"AND", AL, LEN2,       OP_ZP_IY,       anl},       //$31
+{"AND", N2, LEN2,       OP_ZP_IND,      anl},       //$32
+{"AND", NB, LEN2,       OP_SR_IY,       anl},       //$33
+{"BIT", N2, LEN2,       OP_ZP_X,        bit},       //$34
+{"AND", AL, LEN2,       OP_ZP_X,        anl},       //$35
+{"ROL", AL, LEN2,       OP_ZP_X,        rol},       //$36
+{"AND", NB, LEN2,       OP_ZP_IY_L,     anl},       //$37
 {"SEC", AL, LEN1,       OP_NONE,        sec},       //$38
-{"AND", AL, LEN3,       OP_ABS_Y,       andop},     //$39
-{"DEC", N2, LEN1,       OP_A,           unimp},     //$3A
+{"AND", AL, LEN3,       OP_ABS_Y,       anl},       //$39
+{"DEC", N2, LEN1,       OP_A,           dec},       //$3A
 {"TSC", NB, LEN1,       OP_NONE,        tsc},       //$3B
-{"BIT", N2, LEN3,       OP_ABS_X,       unimp},     //$3C
-{"AND", AL, LEN3,       OP_ABS_X,       andop},     //$3D
-{"ROL", AL, LEN3,       OP_ABS_X,       unimp},     //$3E
-{"AND", N2, LEN4,       OP_ABS_X_L,     andop},     //$3F
-{"RTI", AL, LEN1,       OP_NONE,        unimp},     //$40
+{"BIT", N2, LEN3,       OP_ABS_X,       bit},       //$3C
+{"AND", AL, LEN3,       OP_ABS_X,       anl},       //$3D
+{"ROL", AL, LEN3,       OP_ABS_X,       rol},       //$3E
+{"AND", N2, LEN4,       OP_ABS_X_L,     anl},       //$3F
+{"RTI", AL, LEN1,       OP_NONE,        rti},       //$40
 {"EOR", NB, LEN2,       OP_ZP_XI,       eor},       //$41
 {"WDM", NB, LEN2,       OP_IMM,         unimp},     //$42
 {"EOR", NB, LEN2,       OP_SR,          eor},       //$43
@@ -95,7 +96,7 @@ op_tbl opcode_table[] = {
 {"EOR", AL, LEN2|M_A,   OP_IMM,         eor},       //$49
 {"LSR", AL, LEN1,       OP_A,           lsr},       //$4A
 {"PHK", NB, LEN1,       OP_STK,         phk},       //$4B
-{"JMP", AL, LEN3,       OP_IMM,         jmp},       //$4C
+{"JMP", AL, LEN3,       OP_ABS,         jmp},       //$4C
 {"EOR", AL, LEN3,       OP_ABS,         eor},       //$4D
 {"LSR", AL, LEN3,       OP_ABS,         lsr},       //$4E
 {"EOR", NB, LEN4,       OP_ABS_L,       eor},       //$4F
@@ -121,15 +122,15 @@ op_tbl opcode_table[] = {
 {"ADC", NB, LEN2,       OP_SR,          adc},       //$63
 {"STZ", N2, LEN2,       OP_ZP,          unimp},     //$64
 {"ADC", AL, LEN2,       OP_ZP,          adc},       //$65
-{"ROR", AL, LEN2,       OP_ZP,          unimp},     //$66
+{"ROR", AL, LEN2,       OP_ZP,          ror},       //$66
 {"ADC", NB, LEN2,       OP_ZP_IND_L,    adc},       //$67
 {"PLA", AL, LEN1,       OP_STK,         pla},       //$68
 {"ADC", AL, LEN2|M_A,   OP_IMM,         adc},       //$69
-{"ROR", AL, LEN1,       OP_A,           unimp},     //$6A
+{"ROR", AL, LEN1,       OP_A,           ror},       //$6A
 {"RTL", NB, LEN1,       OP_NONE,        rtl},       //$6B
 {"JMP", AL, LEN3,       OP_ABS_IND,     jmp},       //$6C
 {"ADC", AL, LEN3,       OP_ABS,         adc},       //$6D
-{"ROR", AL, LEN3,       OP_ABS,         unimp},     //$6E
+{"ROR", AL, LEN3,       OP_ABS,         ror},       //$6E
 {"ADC", NB, LEN4,       OP_ABS_L,       adc},       //$6F
 {"BVS", AL, LEN2,       OP_REL,         bvs},       //$70
 {"ADC", AL, LEN2,       OP_ZP_IY,       adc},       //$71
@@ -137,7 +138,7 @@ op_tbl opcode_table[] = {
 {"ADC", NB, LEN2,       OP_SR_IY,       adc},       //$73
 {"STZ", N2, LEN2,       OP_ZP_X,        unimp},     //$74
 {"ADC", AL, LEN2,       OP_ZP_X,        adc},       //$75
-{"ROR", AL, LEN2,       OP_ZP_X,        unimp},     //$76
+{"ROR", AL, LEN2,       OP_ZP_X,        ror},       //$76
 {"ADC", NB, LEN2,       OP_ZP_IY_L,     adc},       //$77
 {"SEI", AL, LEN1,       OP_NONE,        sei},       //$78
 {"ADC", AL, LEN3,       OP_ABS_Y,       adc},       //$79
@@ -145,7 +146,7 @@ op_tbl opcode_table[] = {
 {"TDC", NB, LEN1,       OP_NONE,        tdc},       //$7B
 {"JMP", N2, LEN3,       OP_ABS_X_IND,   jmp},       //$7C
 {"ADC", AL, LEN3,       OP_ABS_X,       adc},       //$7D
-{"ROR", AL, LEN3,       OP_ABS_X,       unimp},     //$7E
+{"ROR", AL, LEN3,       OP_ABS_X,       ror},       //$7E
 {"ADC", NB, LEN4,       OP_ABS_X_L,     adc},       //$7F
 {"BRA", N2, LEN2,       OP_REL,         bra},       //$80
 {"STA", AL, LEN2,       OP_ZP_XI,       sta},       //$81
@@ -156,7 +157,7 @@ op_tbl opcode_table[] = {
 {"STX", AL, LEN2,       OP_ZP,          stx},       //$86
 {"STA", NB, LEN2,       OP_ZP_IND_L,    sta},       //$87
 {"DEY", AL, LEN1,       OP_NONE,        dey},       //$88
-{"BIT", AL, LEN2|M_A,   OP_IMM,         unimp},     //$89
+{"BIT", N2, LEN2|M_A,   OP_IMM,         bit},       //$89
 {"TXA", AL, LEN1,       OP_NONE,        txa},       //$8A
 {"PHB", NB, LEN1,       OP_STK,         phb},       //$8B
 {"STY", AL, LEN3,       OP_ABS,         sty},       //$8C
@@ -217,7 +218,7 @@ op_tbl opcode_table[] = {
 {"CMP", NB, LEN2,       OP_SR,          cmp},       //$C3
 {"CPY", AL, LEN2,       OP_ZP,          cpy},       //$C4
 {"CMP", AL, LEN2,       OP_ZP,          cmp},       //$C5
-{"DEC", AL, LEN2,       OP_ZP,          unimp},     //$C6
+{"DEC", AL, LEN2,       OP_ZP,          dec},       //$C6
 {"CMP", NB, LEN2,       OP_ZP_IND_L,    cmp},       //$C7
 {"INY", AL, LEN1,       OP_NONE,        iny},       //$C8
 {"CMP", AL, LEN2|M_A,   OP_IMM,         cmp},       //$C9
@@ -225,7 +226,7 @@ op_tbl opcode_table[] = {
 {"WAI", N2, LEN1,       OP_NONE,        unimp},     //$CB
 {"CPY", AL, LEN3,       OP_ABS,         cpy},       //$CC
 {"CMP", AL, LEN3,       OP_ABS,         cmp},       //$CD
-{"DEC", AL, LEN3,       OP_ABS,         unimp},     //$CE
+{"DEC", AL, LEN3,       OP_ABS,         dec},       //$CE
 {"CMP", NB, LEN4,       OP_ABS_L,       cmp},       //$CF
 {"BNE", AL, LEN2,       OP_REL,         bne},       //$D0
 {"CMP", AL, LEN2,       OP_ZP_IY,       cmp},       //$D1
@@ -233,7 +234,7 @@ op_tbl opcode_table[] = {
 {"CMP", NB, LEN2,       OP_SR_IY,       cmp},       //$D3
 {"PEI", NB, LEN2,       OP_ZP,          unimp},     //$D4
 {"CMP", AL, LEN2,       OP_ZP_X,        cmp},       //$D5
-{"DEC", AL, LEN2,       OP_ZP_X,        unimp},     //$D6
+{"DEC", AL, LEN2,       OP_ZP_X,        dec},       //$D6
 {"CMP", NB, LEN2,       OP_ZP_IY_L,     cmp},       //$D7
 {"CLD", AL, LEN1,       OP_NONE,        cld},       //$D8
 {"CMP", AL, LEN3,       OP_ABS_Y,       cmp},       //$D9
@@ -241,7 +242,7 @@ op_tbl opcode_table[] = {
 {"STP", N2, LEN1,       OP_NONE,        stp},       //$DB
 {"JML", NB, LEN3,       OP_ABS_IND_L,   jml},       //$DC
 {"CMP", AL, LEN3,       OP_ABS_X,       cmp},       //$DD
-{"DEC", AL, LEN3,       OP_ABS_X,       unimp},     //$DE
+{"DEC", AL, LEN3,       OP_ABS_X,       dec},       //$DE
 {"CMP", NB, LEN4,       OP_ABS_X_L,     cmp},       //$DF
 {"CPX", AL, LEN2|X_A,   OP_IMM,         cpx},       //$E0
 {"SBC", AL, LEN2,       OP_ZP_XI,       sbc},       //$E1
@@ -249,15 +250,15 @@ op_tbl opcode_table[] = {
 {"SBC", NB, LEN2,       OP_SR,          sbc},       //$E3
 {"CPX", AL, LEN2,       OP_ZP,          cpx},       //$E4
 {"SBC", AL, LEN2,       OP_ZP,          sbc},       //$E5
-{"INC", AL, LEN2,       OP_ZP,          unimp},     //$E6
+{"INC", AL, LEN2,       OP_ZP,          inc},       //$E6
 {"SBC", NB, LEN2,       OP_ZP_IND_L,    sbc},       //$E7
 {"INX", AL, LEN1,       OP_NONE,        inx},       //$E8
 {"SBC", AL, LEN2|M_A,   OP_IMM,         sbc},       //$E9
 {"NOP", AL, LEN1,       OP_NONE,        nop},       //$EA
 {"XBA", NB, LEN1,       OP_NONE,        unimp},     //$EB
-{"INC", AL, LEN3,       OP_ABS,         unimp},     //$EC
+{"INC", AL, LEN3,       OP_ABS,         inc},       //$EC
 {"SBC", AL, LEN3,       OP_ABS,         sbc},       //$ED
-{"INC", AL, LEN3,       OP_ABS,         unimp},     //$EE
+{"INC", AL, LEN3,       OP_ABS,         inc},       //$EE
 {"SBC", NB, LEN4,       OP_ABS_L,       sbc},       //$EF
 {"BEQ", AL, LEN2,       OP_REL,         beq},       //$F0
 {"SBC", AL, LEN2,       OP_ZP_IY,       sbc},       //$F1
@@ -265,7 +266,7 @@ op_tbl opcode_table[] = {
 {"SBC", NB, LEN2,       OP_SR_IY,       sbc},       //$F3
 {"PEA", NB, LEN3,       OP_IMM,         unimp},     //$F4
 {"SBC", AL, LEN2,       OP_ZP_X,        sbc},       //$F5
-{"INC", AL, LEN2,       OP_ZP_X,        unimp},     //$F6
+{"INC", AL, LEN2,       OP_ZP_X,        inc},       //$F6
 {"SBC", NB, LEN2,       OP_ZP_IY_L,     sbc},       //$F7
 {"SED", AL, LEN1,       OP_NONE,        sed},       //$F8
 {"SBC", AL, LEN3,       OP_ABS_Y,       sbc},       //$F9
@@ -273,7 +274,7 @@ op_tbl opcode_table[] = {
 {"XCE", NB, LEN1,       OP_NONE,        xce},       //$FB
 {"JSR", NB, LEN3,       OP_ABS_X_IND,   jsr},       //$FC
 {"SBC", AL, LEN3,       OP_ABS_X,       sbc},       //$FD
-{"INC", AL, LEN3,       OP_ABS_X,       unimp},     //$FE
+{"INC", AL, LEN3,       OP_ABS_X,       inc},       //$FE
 {"SBC", NB, LEN4,       OP_ABS_X_L,     sbc}        //$FF
 };
 
@@ -305,22 +306,22 @@ uint8_t get_oplen (uint8_t op)
  
     if ((get_cpu_type() == 1) && (unsupport & NOT_6502)) { 
         printf("Unimplemented NMOS 6502 opcode $%02X\n", op);
-    return 0;    // Not implemented!
+        exit(0);
     }
     if ((get_cpu_type() == 2) && (unsupport & NOT_65C02)) {
         printf("Unimplemented CMOS 65c02 opcode $%02X\n", op);
-    return 0;    // Not implemented!
+        exit(0);    // Not implemented!
     }
     oplen = sizeinfo & 0x7;  // Extract length bits
    
     if (sizeinfo & M_A) {
     // Instruction:  add 1 byte if M flag is set
-        if (GET_FLAG(M_FLAG) == 0) {
+        if (GET_MSIZE() == 0) {
             ++oplen;
         }
     }
     if (sizeinfo & X_A)  {
-        if (GET_FLAG(X_FLAG) == 0) {
+        if (GET_XSIZE() == 0) {
             ++oplen;
         }
     }
