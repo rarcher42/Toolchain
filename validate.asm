@@ -26,7 +26,7 @@ START
         LDX #$FF
         TXS
         CLD   
-		JMP	CONT1
+		JMP	CALCDOW
 		BRK
 CONT1	
 		
@@ -66,7 +66,7 @@ CALCDOW
         LDX #12                    ; Month
         LDA #25                    ; Day of month
         JSR WEKDAY                 ; Get the day of the Wek 
-
+		BRK
 ; This routine works for any date from 1900-03-01 to 2155-12-31.
 ; No range checking is done, so validate input before calling.
 ;

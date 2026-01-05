@@ -1250,9 +1250,6 @@ void adc (void)
 			}
 		} else {
 			sum = v1 + v2 + c_in;
-				if (GET_FLAG(C_FLAG)) {
-					sum = sum + 1;
-				}
 			if (sum > 0xFF) {
 				SET_FLAG(C_FLAG);
 			} else {
