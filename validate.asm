@@ -25,11 +25,20 @@ START
         SEI
         LDX 	#$FF
         TXS
-        LDA     #$00
+	JSR	FILLTBL
+	BRK
+
+FILLTBL
+	; Fill in TBL1 and TBL2 with instrumented values
+	; for use in validation.  
+        
         LDY     #$FF
         LDX     #$00
-L1L00   CLC
-	STA     TBL1,X
+	TXA
+L1L00   STA     TBL1,X
+	PHA
+	ROR	TBL1,X
+	ROL	A
         STA     TBL2,Y
 	ADC	#1
 L1C00 	DEY
@@ -37,8 +46,11 @@ L1C00 	DEY
         BNE     L1L00
 	CLC	
 	ADC	#1
-	BCS	L1C01
-	JMP	FAILED
+	BCC	L1C01
+	RTS
+	
+	
+	
 L1C01
         LDA     #$99
         SED

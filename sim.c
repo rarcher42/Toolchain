@@ -505,13 +505,13 @@ int main (void)
     print_block_list();
 
     init_cpu(); 
-    CLR_FLAG(M_FLAG);
-    CLR_FLAG(X_FLAG);
+    SET_FLAG(M_FLAG);
+    SET_FLAG(X_FLAG);
     CLR_FLAG(D_FLAG);
     CLR_FLAG(I_FLAG);
     SET_EMU(TRUE);
     
-    set_cpu_type(CPU_65C02);
+    set_cpu_type(CPU_65816);
     load_srec("validate.s19", &start_address, &end_address);
 
     printf("****  sa = %08X, ea=%08X ***** \n", start_address, end_address);
