@@ -9,73 +9,88 @@
         .INCLUDE "cpu_symbols.inc"
 *   =   $30
 TMP    .byte   ?
-*  	=	$0400
+*       =       $0400
 
-* 	= 	$0500
-TBL1	.fill	256
+*       =       $0500
+TBL1    .fill   256
 
-* 	= 	$0600
-TBL2	.fill	256
+*       =       $0600
+TBL2    .fill   256
 
 
-JMPVEC	.word	?	
+JMPVEC  .word   ?       
 *   =   $2000
 
-START	
-		SEI
-        LDX #$FF
+START   
+        SEI
+        LDX 	#$FF
         TXS
-        LDA	#$99
-		SED
-L1LOL	SEC
-		SBC	#$01
-		BCS	L1LOL
-		LDA #$00
-L2LOL	CLC
-		ADC	#$01
-		BCC	L2LOL
-		CLD
-		JMP	CALCDOW
-		BRK
-CONT1	
-		
-		NOP
-		LDA	#<BEGINE
-		STA	JMPVEC
-		LDA	#>BEGINE
-		STA	JMPVEC+1
-		JMP	(JMPVEC)
-		BRK
-BEGINE	LDX	#$FC
-BLP1	TXA
-		STA	TBL1,X
-		STA	$00,X
-		INX
-		BNE	BLP1
-		LDY	#$FC
-VOOP	TYA
-		EOR #$FF
-		STA	TBL2,Y
-		INY
-		BNE	VOOP
-		LDX #$FC
-SOOP	LDA	TBL1,X
-		PHA
-		AND	TBL2,X
-		LDA	TBL1,X
-		ORA	TBL2,X
-		PLA
-		EOR	TBL2,X
-		STA	TBL1,X
-		INX
-		BNE	SOOP
+        LDA     #$00
+        LDY     #$FF
+        LDX     #$00
+L1L00   CLC
+	STA     TBL1,X
+        STA     TBL2,Y
+	ADC	#1
+L1C00 	DEY
+        INX
+        BNE     L1L00
+	CLC	
+	ADC	#1
+	BCS	L1C01
+	JMP	FAILED
+L1C01
+        LDA     #$99
+        SED
+L1LOL   SEC
+        SBC     #$01
+        BCS     L1LOL
+        LDA #$00
+L2LOL   CLC
+        ADC     #$01
+        BCC     L2LOL
+        CLD
+        JMP     CALCDOW
+        BRK
+CONT1   
+                
+        NOP
+        LDA     #<BEGINE
+                STA     JMPVEC
+                LDA     #>BEGINE
+                STA     JMPVEC+1
+                JMP     (JMPVEC)
+                BRK
+BEGINE  LDX     #$FC
+BLP1    TXA
+                STA     TBL1,X
+                STA     $00,X
+                INX
+                BNE     BLP1
+                LDY     #$FC
+VOOP    TYA
+                EOR #$FF
+                STA     TBL2,Y
+                INY
+                BNE     VOOP
+                LDX #$FC
+SOOP    LDA     TBL1,X
+                PHA
+                AND     TBL2,X
+                LDA     TBL1,X
+                ORA     TBL2,X
+                PLA
+                EOR     TBL2,X
+                STA     TBL1,X
+                INX
+                BNE     SOOP
 
 CALCDOW                              
         LDY #125                   ; YR: 1900 = 0 2000 = 100 2026 = 126
         LDX #12                    ; Month
         LDA #25                    ; Day of month
         JSR WEKDAY                 ; Get the day of the Wek 
-		BRK
+                BRK
 ; This routine works for any date from 1900-03-01 to 2155-12-31.
 ; No range checking is done, so validate input before calling.
 ;
@@ -112,4 +127,8 @@ MOD7    ADC #7          ; Returns (A+3) modulo 7
         RTS
 MTAB     .TEXT            1,5,6,3,1,5,3,0,4,2,6,4       ; Month offsets
 
-        
+FAILED
+	BRK
+	BRK
+	BRK
+	
