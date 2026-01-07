@@ -673,7 +673,7 @@ void plp (void)
     
     vb = pop8();
     cpu_state.flags = vb;
-    change_nzflag(vb, FALSE);
+    // Don't set NV flags - they remain exactly as pulled from stack!
 }
 
 void plx(void)

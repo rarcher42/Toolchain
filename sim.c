@@ -511,8 +511,8 @@ int main (void)
     CLR_FLAG(I_FLAG);
     SET_EMU(TRUE);
     
-    set_cpu_type(CPU_65816);
-    load_srec("validate.s19", &start_address, &end_address);
+    set_cpu_type(CPU_6502);
+    load_srec("validate_6502.s19", &start_address, &end_address);
 
     printf("****  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     put_cpu_address_linear(start_address);
