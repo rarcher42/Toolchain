@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "optbl_65816.h"
 #include "vm.h"
 #include "srec.h"
@@ -495,11 +496,30 @@ void cpu_run(void)
     dump_registers();
 }
 
+#define MAX_CMD_LEN (132)
+
 int main (void)
 {   
     uint32_t start_address;
     uint32_t end_address;
-    
+    struct timespec start, end;
+    long long elapsed_microseconds;
+
+    // Get the start time
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    // <Code to measure goes here, e.g., a function call or loop>
+    // for (volatile int i = 0; i < 1000000; i++);
+
+    // Get the end time
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    // Calculate the difference in microseconds
+    elapsed_microseconds = (end.tv_sec - start.tv_sec) * 1000000LL +
+                           (end.tv_nsec - start.tv_nsec) / 1000LL;
+
+    printf("Elapsed time: %lld microseconds\n", elapsed_microseconds);
+
     init_vm();  // Create the infrastructure to support memory regions
     alloc_target_system_memory();   // Create the system memory blocks
     print_block_list();
@@ -512,6 +532,7 @@ int main (void)
     SET_EMU(TRUE);
     
     set_cpu_type(CPU_6502);
+  
     load_srec("validate_6502.s19", &start_address, &end_address);
 
     printf("****  sa = %08X, ea=%08X ***** \n", start_address, end_address);
