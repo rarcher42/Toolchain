@@ -8,6 +8,7 @@
 #include "sim.h"
 #include "calc_ea.h"
 
+
 // Riddle:  What's the difference between executing a program and outputting 
 // a disassembly?
 // Mostly, whether "next instruction" follows the previous instruction (disassembly),
@@ -367,7 +368,8 @@ void disasm (uint32_t sa, uint32_t ea)
         cpu_fetch();  // Next instruction to "execute' (print)
         cpu_decode();
         // We won't execute the instruction in this case :);
-        disasm_current();
+        if (do_print())
+			disasm_current();
         advance();  // execute() would ordinarily decide next instr
                     // but we're doing it lexically here
     } 

@@ -8,12 +8,14 @@
 #include "srec.h"
 #include "disasm.h"
 #include "sim.h"
+#include "breakpoint.h"
 #include "calc_ea.h"
 #include "opcodes.h"
 
 cpu_state_t cpu_state;
 cpu_dynamic_metadata_t cpu_dynamic_metadata;
 cpu_static_metadata_t cpu_static_metadata;
+BOOL print = TRUE;
 
 
 const uint16_t VEC_RESET = 0xFFFC;
@@ -208,16 +210,10 @@ void dump_registers (void)
     char param[32];
     char outs[128];
     
+    if (do_print() == FALSE)
+		return;
+		
     outs[0] = (char) 0;
-    /*
-    if (is_65816()) {
-        sprintf(param, "%02X:%04X ", cpu_state.PBR, cpu_state.PC);
-        strcpy(outs, param);
-    } else {
-        sprintf(param, "%04X    ", cpu_state.PC);
-    }
-    strcpy(outs, param);
-    */
     
     if (is_65816()) {
         if (GET_MSIZE()) {
@@ -264,8 +260,8 @@ void dump_registers (void)
         } else {
             strcat(outs, " [N]");
         }
-    } 
-    printf("%s", outs);
+    }
+	printf("%s", outs);
 }
 
 void init_cpu (void)
@@ -291,11 +287,13 @@ void print_fetchbuffer (void)
 {
     int i;
     
-    printf("ir=");
-    for (i = 0; i < cpu_dynamic_metadata.oplen; i++) {
-        printf("%02X ", cpu_dynamic_metadata.ir[i]);
-    }
-    printf("\n");   
+    if (do_print()) {
+		printf("ir=");
+		for (i = 0; i < cpu_dynamic_metadata.oplen; i++) {
+			printf("%02X ", cpu_dynamic_metadata.ir[i]);
+		}
+		printf("\n");
+	}   
 }
 
 uint32_t make_linear_address(uint8_t bank, uint16_t pc)
@@ -361,7 +359,8 @@ void load_temp8 (void)
         cpu_dynamic_metadata.TEMP = temp & 0xFF;
     } else {
         temp = (uint16_t) cpu_read(dptr);
-        printf("RD[%04X]==%02X ", dptr, temp);
+        if (do_print())
+			printf("RD[%04X]==%02X ", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp & 0xFF;
     }
 }
@@ -382,7 +381,8 @@ void load_temp16 (void)
         lsb = cpu_read(dptr);
         msb = cpu_read(dptr + 1);
         temp = (msb << 8) | lsb;
-        printf("RD[%04X]==%02X ", dptr, temp);
+        if (do_print())
+			printf("RD[%04X]==%02X ", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp;
     }
 }
@@ -395,7 +395,8 @@ void store_temp16 (void)
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
     msb = (cpu_dynamic_metadata.TEMP >> 8) & 0xFF;
-    printf("WR[%04X]<=%04X ", dptr, ((msb << 8) | lsb));
+    if (do_print())
+		printf("WR[%04X]<=%04X ", dptr, ((msb << 8) | lsb));
     cpu_write(dptr, lsb);
     cpu_write(dptr + 1, msb);
 }
@@ -407,7 +408,8 @@ void store_temp8 (void)
     
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
-    printf("WR[%04X]<=%02X ", dptr, lsb);
+    if (do_print())
+		printf("WR[%04X]<=%02X ", dptr, lsb);
     cpu_write(dptr, lsb);
     
 }
@@ -437,12 +439,22 @@ void cpu_fetch (void)
     int i;
     
     addr = get_cpu_address_linear();
+    if (is_breakpoint(addr) & BP_EX) {
+		printf("BREAKPOINT($%06X)\n", addr);
+		cpu_dynamic_metadata.running = FALSE;
+		return;
+	}
     op = cpu_read(addr);
     cpu_dynamic_metadata.ir[0] = op;
     cpu_dynamic_metadata.oplen = get_oplen(op);
     
     if (cpu_dynamic_metadata.oplen > 1) {
         for (i = 1; i < cpu_dynamic_metadata.oplen; i++) {
+			if (is_breakpoint(addr+i) & BP_EX) {
+				printf("BREAKPOINT($%06X\n", addr+i);
+				cpu_dynamic_metadata.running = FALSE;
+				return;
+			}
             cpu_dynamic_metadata.ir[i] = cpu_read(addr+i);
         }
     }
@@ -453,6 +465,8 @@ void cpu_decode (void)
 {
     uint8_t opcode;
     
+    if (cpu_dynamic_metadata.running == FALSE)
+		return;
     opcode = cpu_dynamic_metadata.ir[0];    // opcode
     cpu_dynamic_metadata.addr_mode = get_addr_mode(opcode);
     calc_EA();
@@ -464,6 +478,9 @@ void cpu_execute (void)
     uint32_t addr;
     void (*fn)(void);
    
+	if (cpu_dynamic_metadata.running == FALSE) {
+		return;
+	}
     fn = get_op_function(get_ir_opcode());
     (*fn)();
     addr = get_cpu_address_linear() + get_ir_oplen();
@@ -476,54 +493,54 @@ unsigned long get_cpu_instruction_count (void)
     return cpu_dynamic_metadata.instruction_counter;
 }
 
+void set_do_print (BOOL out)
+{
+	print = out;
+}
+
+BOOL do_print(void)
+{
+	return print;
+}
+
 
 void cpu_run(void)
 {   
     cpu_dynamic_metadata.running = TRUE;
     cpu_dynamic_metadata.instruction_counter = 0L;
     while (cpu_dynamic_metadata.running) {
-        printf("\n");
+        if (do_print())
+			printf("\n");
         cpu_fetch();  // Next instruction to "execute' (print)
         cpu_decode();
-        dis2_current();
+        if (do_print())
+			dis2_current();
         cpu_execute();
         cpu_dynamic_metadata.instruction_counter += 1L;
         if (cpu_dynamic_metadata.instruction_counter > 1E9) {
             cpu_dynamic_metadata.running = FALSE;
         }
     } 
-    printf("\n\n");
+    if (do_print()) 
+		printf("\n\n");
     dump_registers();
 }
 
 #define MAX_CMD_LEN (132)
+
 
 int main (void)
 {   
     uint32_t start_address;
     uint32_t end_address;
     struct timespec start, end;
-    long long elapsed_microseconds;
-
-    // Get the start time
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    // <Code to measure goes here, e.g., a function call or loop>
-    // for (volatile int i = 0; i < 1000000; i++);
-
-    // Get the end time
-    clock_gettime(CLOCK_MONOTONIC, &end);
-
-    // Calculate the difference in microseconds
-    elapsed_microseconds = (end.tv_sec - start.tv_sec) * 1000000LL +
-                           (end.tv_nsec - start.tv_nsec) / 1000LL;
-
-    printf("Elapsed time: %lld microseconds\n", elapsed_microseconds);
-
+    long long elapsed_nanoseconds;
+    
     init_vm();  // Create the infrastructure to support memory regions
     alloc_target_system_memory();   // Create the system memory blocks
+    init_breakpoints();
     print_block_list();
-
+    
     init_cpu(); 
     SET_FLAG(M_FLAG);
     SET_FLAG(X_FLAG);
@@ -537,9 +554,36 @@ int main (void)
 
     printf("****  sa = %08X, ea=%08X ***** \n", start_address, end_address);
     put_cpu_address_linear(start_address);
-    cpu_run();
+    // Get the start time
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    set_do_print(TRUE);	// Suppress printing of info during execution
+    add_breakpoint(0x21C0, BP_EX);
+	cpu_run();
+    // Get the end time
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    // Calculate the difference in microseconds
+    elapsed_nanoseconds = (end.tv_sec - start.tv_sec) * 1000000000LL +
+                           (end.tv_nsec - start.tv_nsec);
+
+    printf("\n\nElapsed time: %lld microseconds\n", elapsed_nanoseconds / 1000L);
     // disasm(start_address, end_address);
-    printf("\n\n%ld instructions executed\n\n", get_cpu_instruction_count());
+    printf("\n%ld instructions executed\n\n", get_cpu_instruction_count());
+    
+    add_breakpoint(0x1000, BP_RD);
+    add_breakpoint(0x2000, BP_WR);
+    add_breakpoint(0x3000, BP_EX);
+    add_breakpoint(0x4000, BP_RD | BP_WR);
+    add_breakpoint(0x5000, BP_RD | BP_EX);
+    add_breakpoint(0x6000, BP_RD | BP_WR | BP_EX);
+    print_breakpoints();
+    print_bp(0x1000);
+    print_bp(0x2000);
+    print_bp(0x3000);
+    print_bp(0x4000);
+    print_bp(0x5000);
+    print_bp(0x6000);
+    print_bp(0x7070);
     exit(0);
 }
 

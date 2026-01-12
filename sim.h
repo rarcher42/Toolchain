@@ -3,7 +3,7 @@
 typedef uint8_t BOOL;
 #define FALSE (0)
 #define TRUE (!FALSE)
-
+#define NULL_PTR 0xFFFFFFFF
 
 #define N_FLAG 0x80
 #define V_FLAG 0x40
@@ -55,7 +55,6 @@ typedef struct {
     address_mode_t  addr_mode;  // Remember address mode
     uint32_t EA;                // calculated effective address
     uint16_t TEMP;              
-    // uint8_t TEMP_L;
     uint8_t ir[4];              // Virtual instruction
                                 // register 0..oplen-1 valid
 } cpu_dynamic_metadata_t;
@@ -77,52 +76,56 @@ typedef struct {
 // Track events inside or entering the CPU
 typedef struct {
     uint8_t nmi_pending;        // NMI made a new high->low transition
-    uint8_t irq_pending;        // IRQ is low (active)
-    uint8_t reset_pending;      // RESET signal went low
+    uint8_t irq_active;        // IRQ is low (active)
+    uint8_t reset_active;      // RESET signal went low
 } cpu_event_metadata_t;
 
 
-extern void SET_FLAG (uint8_t fset_mask);
-extern void CLR_FLAG (uint8_t fres_mask);
-extern uint8_t GET_FLAGS(void);
-extern uint8_t GET_FLAG(uint8_t flag);
-extern uint8_t GET_MSIZE(void);
-extern uint8_t GET_XSIZE(void);
-extern uint8_t IS_EMU(void);
-extern void SET_EMU(uint8_t em);
-extern uint8_t get_cpu_type(void);
-extern BOOL is_65816(void);
-BOOL is_6502(void);
-BOOL is_65C02(void);
-extern void change_vflag(uint16_t in1, uint16_t in2, uint16_t res, BOOL sixteen);
-extern uint16_t get_dpr(void);
-extern uint8_t get_dbr(void);
-extern uint8_t get_pbr(void);
-extern void get_flags(char *flags);
-extern void dump_registers(void);
 // For tightly-coupled helper modules (e.g. calc_ea), 
 // allow acess to cpu_state.  Use accessor functions later?
 extern cpu_state_t cpu_state;
 extern cpu_dynamic_metadata_t cpu_dynamic_metadata;
 
+// Prototypes
+void SET_FLAG (uint8_t fset_mask);
+void CLR_FLAG (uint8_t fres_mask);
+uint8_t GET_FLAGS(void);
+uint8_t GET_FLAG(uint8_t flag);
+uint8_t GET_MSIZE(void);
+uint8_t GET_XSIZE(void);
+uint8_t IS_EMU(void);
+void SET_EMU(uint8_t em);
+uint8_t get_cpu_type(void);
+BOOL is_65816(void);
+BOOL is_6502(void);
+BOOL is_65C02(void);
+void change_vflag(uint16_t in1, uint16_t in2, uint16_t res, BOOL sixteen);
+uint16_t get_dpr(void);
+uint8_t get_dbr(void);
+uint8_t get_pbr(void);
+void get_flags(char *flags);
+void dump_registers(void);
+BOOL do_print(void);
+void init_breakpoints(void);
+
 // Various accessor functions
-extern char *get_mnemonic(uint8_t op);
+char *get_mnemonic(uint8_t op);
 // The cpu_fetch() function populates the instruction register
 // and metadata as sharable metadata across modules.
 uint8_t get_ir_opcode(void);    // The op-code just fetched
-extern uint8_t get_ir_oplen(void);  // The op-code length
-extern address_mode_t  get_ir_addr_mode(void);  // OP's address mode
-extern uint8_t get_ir_indexed(uint8_t index);   // Get any ir reg byte
+uint8_t get_ir_oplen(void);  // The op-code length
+address_mode_t  get_ir_addr_mode(void);  // OP's address mode
+uint8_t get_ir_indexed(uint8_t index);   // Get any ir reg byte
 
-extern void set_EA(uint32_t ea);
-extern uint32_t get_EA (void);
-extern uint32_t make_linear_address(uint8_t bank, uint16_t pc);
-extern uint32_t get_cpu_address_linear(void);
-extern void put_cpu_address_linear(uint32_t address);
-extern void load_temp16 (void);
-extern void load_temp8(void);
+void set_EA(uint32_t ea);
+uint32_t get_EA (void);
+uint32_t make_linear_address(uint8_t bank, uint16_t pc);
+uint32_t get_cpu_address_linear(void);
+void put_cpu_address_linear(uint32_t address);
+void load_temp16 (void);
+void load_temp8(void);
 void store_temp16(void);
 void store_temp8(void);
-extern void cpu_fetch(void);
-extern void cpu_decode(void);
+void cpu_fetch(void);
+void cpu_decode(void);
 

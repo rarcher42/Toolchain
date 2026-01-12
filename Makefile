@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -I.
+CFLAGS=-I.
 DEPS = sim.h optbl_65816.h disasm.h calc_ea.h vm.h srec.h opcodes.h
 OBJ = sim.o optbl_65816.o disasm.o calc_ea.o vm.o srec.o opcodes.o
 
@@ -13,3 +13,4 @@ sim: $(OBJ)
 
 clean:
 	rm -f *.o 
+
