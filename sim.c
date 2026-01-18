@@ -556,7 +556,7 @@ int main (void)
     put_cpu_address_linear(start_address);
     // Get the start time
     clock_gettime(CLOCK_MONOTONIC, &start);
-    set_do_print(TRUE);	// Suppress printing of info during execution
+    set_do_print(FALSE);	// Suppress or allow printing of info during execution
     add_breakpoint(0x21C0, BP_EX);
 	cpu_run();
     // Get the end time
@@ -569,21 +569,5 @@ int main (void)
     printf("\n\nElapsed time: %lld microseconds\n", elapsed_nanoseconds / 1000L);
     // disasm(start_address, end_address);
     printf("\n%ld instructions executed\n\n", get_cpu_instruction_count());
-    
-    add_breakpoint(0x1000, BP_RD);
-    add_breakpoint(0x2000, BP_WR);
-    add_breakpoint(0x3000, BP_EX);
-    add_breakpoint(0x4000, BP_RD | BP_WR);
-    add_breakpoint(0x5000, BP_RD | BP_EX);
-    add_breakpoint(0x6000, BP_RD | BP_WR | BP_EX);
-    print_breakpoints();
-    print_bp(0x1000);
-    print_bp(0x2000);
-    print_bp(0x3000);
-    print_bp(0x4000);
-    print_bp(0x5000);
-    print_bp(0x6000);
-    print_bp(0x7070);
-    exit(0);
 }
 
