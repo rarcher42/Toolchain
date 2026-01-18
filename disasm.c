@@ -5,7 +5,7 @@
 #include "optbl_65816.h"
 #include "vm.h"
 #include "srec.h"
-#include "sim.h"
+#include "cpu65xx.h"
 #include "calc_ea.h"
 
 
@@ -368,7 +368,7 @@ void disasm (uint32_t sa, uint32_t ea)
         cpu_fetch();  // Next instruction to "execute' (print)
         cpu_decode();
         // We won't execute the instruction in this case :);
-        if (do_print())
+        if (print_execution())
 			disasm_current();
         advance();  // execute() would ordinarily decide next instr
                     // but we're doing it lexically here

@@ -4,7 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include "optbl_65816.h"
-#include "sim.h"
+#include "cpu65xx.h"
 #include "breakpoint.h"
 
 

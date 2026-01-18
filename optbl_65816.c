@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "optbl_65816.h"
-#include "sim.h"
+#include "cpu65xx.h"
 #include "opcodes.h"
 
 // sizeinfo field: includes modifiers for M and X flags

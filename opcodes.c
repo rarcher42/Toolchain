@@ -6,7 +6,7 @@
 #include "vm.h"
 #include "srec.h"
 #include "disasm.h"
-#include "sim.h"
+#include "cpu65xx.h"
 #include "calc_ea.h"
 #include "opcodes.h"
 

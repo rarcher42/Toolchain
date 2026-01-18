@@ -10,11 +10,13 @@ typedef unsigned char BOOL;
 
 struct termios orig_termios;
 
-void disableRawMode() {
+void disableRawMode (void) 
+{
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
 
-void enableRawMode() {
+void enableRawMode (void) 
+{
     tcgetattr(STDIN_FILENO, &orig_termios);
     atexit(disableRawMode);
 
@@ -29,16 +31,20 @@ void enableRawMode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
-int main() 
+void init_raw_io (void)
 {
-	BOOL running = TRUE;
-    // Disable C library buffering for stdin and stdout
+	// Disable C library buffering for stdin and stdout
     setvbuf(stdin, NULL, _IONBF, 0);
     setvbuf(stdout, NULL, _IONBF, 0);
 
     // Enable raw terminal mode
     enableRawMode();
+}
 
+int main() 
+{
+	BOOL running = TRUE;
+    
     char c;
 
     running = TRUE;
@@ -52,15 +58,12 @@ int main()
 			running = FALSE;
 		}
     }
-
-    // disableRawMode() is called automatically via atexit()
-
     return 0;
 }
 
 #if 0
      ---
-    |   |
+    |   |c
     |---
 
 #endif

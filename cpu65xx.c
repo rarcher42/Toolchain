@@ -7,7 +7,7 @@
 #include "vm.h"
 #include "srec.h"
 #include "disasm.h"
-#include "sim.h"
+#include "cpu65xx.h"
 #include "breakpoint.h"
 #include "calc_ea.h"
 #include "opcodes.h"
@@ -20,6 +20,15 @@ BOOL print = TRUE;
 
 const uint16_t VEC_RESET = 0xFFFC;
 
+void set_print_execution (BOOL out)
+{
+	print = out;
+}
+
+BOOL print_execution(void)
+{
+	return print;
+}
 
 uint8_t get_cpu_type (void)
 {
@@ -210,7 +219,7 @@ void dump_registers (void)
     char param[32];
     char outs[128];
     
-    if (do_print() == FALSE)
+    if (print_execution() == FALSE)
 		return;
 		
     outs[0] = (char) 0;
@@ -287,7 +296,7 @@ void print_fetchbuffer (void)
 {
     int i;
     
-    if (do_print()) {
+    if (print_execution()) {
 		printf("ir=");
 		for (i = 0; i < cpu_dynamic_metadata.oplen; i++) {
 			printf("%02X ", cpu_dynamic_metadata.ir[i]);
@@ -359,7 +368,7 @@ void load_temp8 (void)
         cpu_dynamic_metadata.TEMP = temp & 0xFF;
     } else {
         temp = (uint16_t) cpu_read(dptr);
-        if (do_print())
+        if (print_execution())
 			printf("RD[%04X]==%02X ", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp & 0xFF;
     }
@@ -381,7 +390,7 @@ void load_temp16 (void)
         lsb = cpu_read(dptr);
         msb = cpu_read(dptr + 1);
         temp = (msb << 8) | lsb;
-        if (do_print())
+        if (print_execution())
 			printf("RD[%04X]==%02X ", dptr, temp);
         cpu_dynamic_metadata.TEMP = temp;
     }
@@ -395,7 +404,7 @@ void store_temp16 (void)
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
     msb = (cpu_dynamic_metadata.TEMP >> 8) & 0xFF;
-    if (do_print())
+    if (print_execution())
 		printf("WR[%04X]<=%04X ", dptr, ((msb << 8) | lsb));
     cpu_write(dptr, lsb);
     cpu_write(dptr + 1, msb);
@@ -408,7 +417,7 @@ void store_temp8 (void)
     
     dptr = get_EA();
     lsb = cpu_dynamic_metadata.TEMP & 0xFF;
-    if (do_print())
+    if (print_execution())
 		printf("WR[%04X]<=%02X ", dptr, lsb);
     cpu_write(dptr, lsb);
     
@@ -439,11 +448,6 @@ void cpu_fetch (void)
     int i;
     
     addr = get_cpu_address_linear();
-    if (is_breakpoint(addr) & BP_EX) {
-		printf("BREAKPOINT($%06X)\n", addr);
-		cpu_dynamic_metadata.running = FALSE;
-		return;
-	}
     op = cpu_read(addr);
     cpu_dynamic_metadata.ir[0] = op;
     cpu_dynamic_metadata.oplen = get_oplen(op);
@@ -458,7 +462,10 @@ void cpu_fetch (void)
             cpu_dynamic_metadata.ir[i] = cpu_read(addr+i);
         }
     }
-    // print_fetchbuffer();
+    if (is_breakpoint(addr) & BP_EX) {
+		printf("BREAKPOINT($%06X)\n", addr);
+		cpu_dynamic_metadata.running = FALSE;
+	}
 }
 
 void cpu_decode (void)
@@ -493,37 +500,44 @@ unsigned long get_cpu_instruction_count (void)
     return cpu_dynamic_metadata.instruction_counter;
 }
 
-void set_do_print (BOOL out)
+void cpu_run(BOOL init)
 {
-	print = out;
-}
-
-BOOL do_print(void)
-{
-	return print;
-}
-
-
-void cpu_run(void)
-{   
-    cpu_dynamic_metadata.running = TRUE;
-    cpu_dynamic_metadata.instruction_counter = 0L;
+	if (init == TRUE) {
+		cpu_dynamic_metadata.instruction_counter = 0L;
+		cpu_dynamic_metadata.running = TRUE;
+	}
+    
     while (cpu_dynamic_metadata.running) {
-        if (do_print())
+        if (print_execution())
 			printf("\n");
-        cpu_fetch();  // Next instruction to "execute' (print)
+        cpu_fetch();
         cpu_decode();
-        if (do_print())
+        if (print_execution())
 			dis2_current();
         cpu_execute();
         cpu_dynamic_metadata.instruction_counter += 1L;
-        if (cpu_dynamic_metadata.instruction_counter > 1E9) {
-            cpu_dynamic_metadata.running = FALSE;
-        }
     } 
-    if (do_print()) 
+    if (print_execution()) 
 		printf("\n\n");
     dump_registers();
+}
+
+void cpu_resume(void)
+{   
+	// Step over breakpoint!
+	if (print_execution())
+			printf("\n");
+	cpu_fetch();
+	cpu_dynamic_metadata.running = TRUE;
+	cpu_decode();
+	if (print_execution()) 
+		dis2_current();
+	cpu_dynamic_metadata.running = TRUE;
+	cpu_execute();
+	cpu_dynamic_metadata.running = TRUE;
+	if (print_execution()) 
+		printf("\n\n");
+	cpu_run(FALSE);
 }
 
 #define MAX_CMD_LEN (132)
@@ -535,11 +549,12 @@ int main (void)
     uint32_t end_address;
     struct timespec start, end;
     long long elapsed_nanoseconds;
+    int i;
     
     init_vm();  // Create the infrastructure to support memory regions
     alloc_target_system_memory();   // Create the system memory blocks
     init_breakpoints();
-    print_block_list();
+    // print_block_list();
     
     init_cpu(); 
     SET_FLAG(M_FLAG);
@@ -556,9 +571,12 @@ int main (void)
     put_cpu_address_linear(start_address);
     // Get the start time
     clock_gettime(CLOCK_MONOTONIC, &start);
-    set_do_print(FALSE);	// Suppress or allow printing of info during execution
+    set_print_execution(TRUE);		// Suppress or allow printing of info during execution
     add_breakpoint(0x21C0, BP_EX);
-	cpu_run();
+    add_breakpoint(0x21C3, BP_EX);
+	cpu_run(TRUE);
+	for (i=0; i < 256; i++) 
+		cpu_resume();
     // Get the end time
     clock_gettime(CLOCK_MONOTONIC, &end);
 
