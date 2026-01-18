@@ -20,7 +20,7 @@ const uint8_t N2 = (NOT_6502);      // Only 6502 not supported
 const uint8_t NB = (NOT_6502 | NOT_65C02);  // Only 65816 supported
 
 op_tbl opcode_table[] = {
-{"BRK", AL, LEN1,       OP_NONE,        brk},       //$00
+{"BRK", AL, LEN1,       OP_NONE,        brak},      //$00
 {"ORA", AL, LEN2,       OP_ZP_XI,       ora},       //$01
 {"COP", NB, LEN2,       OP_IMM,         unimp},     //$02
 {"ORA", NB, LEN2,       OP_SR,          ora},       //$03

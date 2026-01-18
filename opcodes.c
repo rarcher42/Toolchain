@@ -199,7 +199,7 @@ void stp (void)
     cpu_dynamic_metadata.running = FALSE;
 }
 
-void brk (void)
+void brak (void)
 {
     uint8_t lsb, msb;
     

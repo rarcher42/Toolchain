@@ -50,11 +50,11 @@ void dump_hex (uint32_t sa, uint32_t ea)
 
     for (addr = sa; addr <= ea; addr++) {
         if ((addr & 0xF) == 0) {
-            printf("\n%08X: ", addr);
+            printf("\r\n%08X: ", addr);
     } 
     printf("%02X ", cpu_read(addr));
     }
-    printf("\n");
+    printf("\r\n");
 }
 
 
@@ -74,7 +74,7 @@ int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
     fp = fopen(fn, "r");
     if (fp != NULL) {
         while (fgets(nextline, MAX_LINE, fp)) {
-            printf("%s", nextline);
+            ; // printf("%s\r", nextline);
         if (nextline[0] != 'S') {
                 return -1;
         }

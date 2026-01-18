@@ -16,7 +16,7 @@ void iny(void);
 void dey(void);
 
 void stp(void);
-void brk(void);
+void brak(void);
 
 void xce(void);
 
