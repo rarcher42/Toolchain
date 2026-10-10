@@ -13,15 +13,9 @@ TMP    .byte   ?
 
 * 	= 	$2000
 START 		
-        SEP	#(X_FLAG | M_FLAG)		;  All 8 bit registers
         CLD
         .as
         .xs
-		SEC					        ; Don't/Enter 65c02 emulation mode
-		XCE					        					
-        NOP
-        NOP
-        NOP
         LDY #125                    ; 2025
         LDX #12                     ; December
         LDA #25                     ; 25th
