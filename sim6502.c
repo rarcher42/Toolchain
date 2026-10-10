@@ -984,9 +984,9 @@ int main (void)
     int i;
 
     set_cputype(M65C02);
-    load_srec("dow.hex", &start_address, &end_address);
+    load_srec("dow.s28", &start_address, &end_address);
     printf("\nStart address: $%08X", start_address);
-    printf("\n  End address: $%08X", end_address);
+    printf("\n  End address: $%08X\n", end_address);
     cpu_reg.PC = start_address;
     dump_registers();
     // disasm(start_address, end_address);

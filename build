@@ -1,13 +1,7 @@
-gcc -c -Wall opcodes.c
-gcc -c -Wall cpu65xx.c
-gcc -c -Wall calc_ea.c
-gcc -c -Wall disasm.c
-gcc -c -Wall vm.c
-gcc -c -Wall srec.c
-gcc -c -Wall optbl_65816.c
-gcc -c -Wall breakpoint.c
-gcc -c -Wall cli.c
-cc cpu65xx.o optbl_65816.o disasm.o calc_ea.o vm.o srec.o opcodes.o breakpoint.o cli.o -o sim
+./64tass --m65816 dow.asm -L dow.lst --output=dow.s28 --s-record --long-address
+gcc -c -Wall sim6502.c 
+cc sim6502.o -o sim6502
+
 
 
 
