@@ -1,9 +1,16 @@
 // Starting over, with one big ugly file for code to start with.
 // Will obliterate and modularize old code as development progresses
 // Phase 1:  8 bit 65c02 and 6502 only, with full debugging capability
-// but tables set up for full 65c816 evolution
+// but tables set up for full 65c816
+// and multiple computer simulation
+// Note: Currently, passing cpu_context_t pointers around at all levels.
+// For efficiency, we'll want to pass cpu_context_t or cpu_reg_t or cpu_metadata_t
+// at the appropriate functional levels, and probably cache the current memory pointer.
+// All of this is mechanical and a natural part of modularization, to be left after a
+// working product had been first achieved.
 //
 // R. Archer 10/8/26
+//
 //
 //
 #include <stdio.h>
@@ -12,9 +19,42 @@
 #include <string.h>
 
 #define MEMORY_SIZE    (65536)
-uint8_t mem[MEMORY_SIZE];
+
+typedef struct
+{
+    uint8_t A;
+    uint8_t X;
+    uint8_t Y;
+    uint8_t S;
+    uint16_t PC;
+    uint8_t P;
+} cpu_reg_t;
+
+typedef struct cpu_meta
+{
+    uint8_t oplen;
+    uint8_t ir[4];
+    uint32_t cycles;
+} cpu_metadata_t;
+
+typedef struct
+{
+    cpu_reg_t reg;
+    cpu_metadata_t meta;
+} cpu_context_t;
+
+typedef struct {
+    cpu_context_t cpu;
+    uint32_t mem[MEMORY_SIZE];
+
+} computer_context_t;
+
+computer_context_t computer;
+
 
 // Op-codes (modularize!)
+
+
 void nop (void)
 {
 
@@ -22,6 +62,7 @@ void nop (void)
 
 void clc (void)
 {
+    printf("CLC\n");
 }
 
 void sec (void)
@@ -30,6 +71,7 @@ void sec (void)
 
 void cld (void)
 {
+    printf("CLD\n");
 }
 
 void sed (void)
@@ -135,6 +177,7 @@ void jmp (void)
 
 void jsr (void)
 {
+    printf("JSR\n");
 }
 
 void jsl (void)
@@ -143,6 +186,7 @@ void jsl (void)
 
 void rts (void)
 {
+    printf("RTS\n");
 }
 
 void rti (void)
@@ -383,20 +427,20 @@ void ror (void)
 // SREC loader
 const int MAX_LINE = 130;
 
-uint8_t cpu_read (uint32_t address)
+uint8_t cpu_read (computer_context_t *computer, uint32_t address)
 {
     if (address < MEMORY_SIZE)
-        return mem[address];
+        return computer->mem[address];
     else {
         printf("\nInvalid memory address $%08X", address);
         return 0;
     }
 }
 
-void cpu_write (uint32_t address, uint8_t val)
+void cpu_write (computer_context_t *computer, uint32_t address, uint8_t val)
 {
     if (address < MEMORY_SIZE) {
-        mem[address] = val;
+        computer->mem[address] = val;
     } else {
         printf("\nInvalid memory address $%08X", address);
         return;
@@ -428,19 +472,21 @@ uint32_t from_hex_str (uint8_t *s, uint8_t n)
     return sum;
 }
 
-uint32_t from_hex (uint32_t addr, uint8_t n)
+#if false
+uint32_t from_hex (computer_context_t *computer uint32_t addr, uint8_t n)
 {
     uint32_t sum = 0;
     int i;
 
     for (i = n-1; i >= 0; --i) {
         // printf("_%02X_", numseq[i]);
-        sum = (sum << 8) + cpu_read(addr+i);
+        sum = (sum << 8) + cpu_read(computer, addr+i);
     }
     return sum;
 }
+#endif
 
-void dump_hex (uint32_t sa, uint32_t ea)
+void dump_hex (computer_context_t *computer, uint32_t sa, uint32_t ea)
 {
     uint32_t addr;
 
@@ -448,12 +494,12 @@ void dump_hex (uint32_t sa, uint32_t ea)
         if ((addr & 0xF) == 0) {
             printf("\r\n%08X: ", addr);
         }
-        printf("%02X ", cpu_read(addr));
+        printf("%02X ", cpu_read(computer, addr));
     }
     printf("\r\n");
 }
 
-int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
+int load_srec (computer_context_t *computer, char *fn, uint32_t *start_address, uint32_t *end_address)
 {
     int j;
     FILE *fp;
@@ -483,7 +529,7 @@ int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
                     j = 8;
                     while (nbytes-- > 0) {
                         b = from_hex_str((uint8_t *) &nextline[j], 2);
-                        cpu_write(addr, b);
+                        cpu_write(computer, addr, b);
                         if (addr < *start_address)
                             *start_address = addr;
                         if (addr > *end_address)
@@ -498,7 +544,7 @@ int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
                     j = 10;
                     while (nbytes-- > 0) {
                         b = from_hex_str((uint8_t *) &nextline[j], 2);
-                        cpu_write(addr, b);
+                        cpu_write(computer, addr, b);
                         if (addr < *start_address)
                             *start_address = addr;
                         if (addr > *end_address)
@@ -513,7 +559,7 @@ int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
                     j = 12;
                     while (nbytes-- > 0) {
                         b = from_hex_str((uint8_t *) &nextline[j], 2);
-                        cpu_write(addr, b);
+                        cpu_write(computer, addr, b);
                         if (addr < *start_address)
                             *start_address = addr;
                         if (addr > *end_address)
@@ -539,7 +585,7 @@ int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
     } else {
         return -1;
     }
-    dump_hex(*start_address, *end_address);
+    dump_hex(computer, *start_address, *end_address);
     return 0;
 }
 
@@ -883,18 +929,6 @@ address_mode_t get_addr_mode (uint8_t op)
     return opcode_table[op].adm;
 }
 
-typedef struct cpu_context
-{
-    uint8_t A;
-    uint8_t X;
-    uint8_t Y;
-    uint8_t S;
-    uint16_t PC;
-    uint8_t P;
-    // Pseudo-registers
-    uint8_t oplen;  // Number of valid ir[] bytes
-    uint8_t ir[4];  // Instruction register (pseudo-registers)
-} cpu_reg_t;
 
 #define N_FLAG 0x80
 #define V_FLAG 0x40
@@ -905,14 +939,12 @@ typedef struct cpu_context
 #define C_FLAG 0x01
 
 
-cpu_reg_t cpu_reg;
-
-void dump_registers (void)
+void dump_registers (computer_context_t  *computer)
 {
     uint8_t f;
     char flagstr[9] = "        ";
 
-    f = cpu_reg.P;
+    f = computer->cpu.reg.P;
     if (f & N_FLAG)
         flagstr[0] = 'N';
     if (f & V_FLAG)
@@ -929,10 +961,10 @@ void dump_registers (void)
     if (f & C_FLAG)
         flagstr[7] = 'C';
 
-    printf("PC=$%04X A=$%02X X=$%02X Y=$%02X SP=$01%02X P=%s\n", cpu_reg.PC, cpu_reg.A, cpu_reg.X,                    cpu_reg.Y, cpu_reg.S, flagstr);
+    printf("PC=$%04X A=$%02X X=$%02X Y=$%02X SP=$01%02X P=%s\n", computer->cpu.reg.PC, computer->cpu.reg.A, computer->cpu.reg.X, computer->cpu.reg.Y, computer->cpu.reg.S, flagstr);
 }
 
-void disasm (uint32_t start, uint32_t end)
+void disasm (computer_context_t *computer, uint32_t start, uint32_t end)
 {
     uint32_t vpc;
     uint8_t fetchlen;
@@ -940,42 +972,53 @@ void disasm (uint32_t start, uint32_t end)
 
     vpc = start;
     while (vpc <= end) {
-        fetchlen = fetch_len(mem[vpc]);
-        printf("%s  ", get_mnemonic(mem[vpc]));
+        fetchlen = fetch_len(computer->mem[vpc]);
+        printf("%s  ", get_mnemonic(computer->mem[vpc]));
         for (i = 0; i < fetchlen; i++) {
-            printf(" %02X", mem[vpc+i]);
+            printf(" %02X", computer->mem[vpc+i]);
         }
         printf("\n");
         vpc += fetchlen;
     }
 }
 
-void print_ir (void)
+void print_ir (computer_context_t *computer)
 {
     int i;
 
-    printf("$%04X: ", cpu_reg.PC);
-    for (i = 0; i < cpu_reg.oplen; i++) {
-        printf("%02X ", cpu_reg.ir[i]);
+    printf("$%04X: ", computer->cpu.reg.PC);
+    for (i = 0; i < computer->cpu.meta.oplen; i++) {
+        printf("%02X ", computer->cpu.meta.ir[i]);
     }
     printf("\n");
 }
 
-void fetch (void)
+void fetch (computer_context_t *computer)
 {
     int i;
     uint16_t ip;
     uint8_t opcode;
 
-    ip = cpu_reg.PC;
-    opcode = mem[ip];
-    cpu_reg.oplen = fetch_len(opcode);
-    for (i = 0; i < cpu_reg.oplen; i++) {
-        cpu_reg.ir[i] = mem[ip + i];
+    ip = computer->cpu.reg.PC;
+    opcode = computer->mem[ip];
+    computer->cpu.meta.oplen = fetch_len(opcode);
+    for (i = 0; i < computer->cpu.meta.oplen; i++) {
+        computer->cpu.meta.ir[i] = computer->mem[ip + i];
     }
-    print_ir();
-    cpu_reg.PC += cpu_reg.oplen;
+    print_ir(computer);
 }
+
+void decode (computer_context_t *computer)
+{
+
+}
+
+void execute (computer_context_t *computer)
+{
+    opcode_table[computer->cpu.meta.ir[0]].do_op();
+    computer->cpu.reg.PC += computer->cpu.meta.oplen;
+}
+
 
 int main (void)
 {
@@ -984,14 +1027,16 @@ int main (void)
     int i;
 
     set_cputype(M65C02);
-    load_srec("dow.s28", &start_address, &end_address);
+    load_srec(&computer, "dow.s28", &start_address, &end_address);
     printf("\nStart address: $%08X", start_address);
     printf("\n  End address: $%08X\n", end_address);
-    cpu_reg.PC = start_address;
-    dump_registers();
+    computer.cpu.reg.PC = start_address;
+    dump_registers(&computer);
     // disasm(start_address, end_address);
-    for (i = 0; i < 50; i++)
-        fetch();
+    for (i = 0; i < 30; i++) {
+        fetch(&computer);
+        decode(&computer);
+        execute(&computer);
+    }
     printf("\n\n\nCPU simulator done!\n");
-
 }

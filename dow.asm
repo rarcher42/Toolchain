@@ -1,7 +1,7 @@
 ; Assembled with 64TASS
 ; 	64tass -c ~.asm -L ~.lst --intel-hex -o ~.hex
 ; or
-;   64tass -c ~.asm -L ~.lst --s-record -o ~.hex 
+;   64tass -c ~.asm -L ~.lst --s-record [--long-address] -o ~.hex
 ; Put the above equates into an included file per peripheral or board
 
         	.cpu    "65816"
@@ -13,7 +13,6 @@ TMP    .byte   ?
 
 * 	= 	$2000
 START 		
-        CLD
         .as
         .xs
         LDY #125                    ; 2025
@@ -36,7 +35,6 @@ START
 ; Output: Weekday in A (0=Sunday, 1=Monday, ..., 6=Saturday)
 
 WEKDAY:
-        SEP #(M_FLAG | X_FLAG)
         .as
         .xs
         CLD             ; RDA: original code has a bug.  Will not work if D flag set on entry!
