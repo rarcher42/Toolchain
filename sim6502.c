@@ -317,7 +317,6 @@ address_mode_t get_addr_mode (uint8_t op)
     return opcode_table[op].adm;
 }
 
-
 void set_flag (cpu_context_t *cpu, uint8_t flag)
 {
     cpu->reg.P |= flag;
@@ -353,41 +352,41 @@ void dump_registers (cpu_context_t *cpu)
     printf("PC=$%04X A=$%02X X=$%02X Y=$%02X SP=$01%02X P=%s\n", cpu->reg.PC, cpu->reg.A, cpu->reg.X, cpu->reg.Y, cpu->reg.S, flagstr);
 }
 
-void print_ir (virtual_computer_t *computer)
+void print_ir (cpu_context_t *cpu)
 {
     int i;
 
-    printf("$%04X: ", computer->cpu.reg.PC);
-    for (i = 0; i < computer->cpu.meta.oplen; i++) {
-        printf("%02X ", computer->cpu.meta.ir[i]);
+    printf("$%04X: ", cpu->reg.PC);
+    for (i = 0; i < cpu->meta.oplen; i++) {
+        printf("%02X ", cpu->meta.ir[i]);
     }
     printf("\n");
 }
 
-void fetch (virtual_computer_t *computer)
+void fetch (cpu_context_t *cpu)
 {
     int i;
     uint16_t ip;
     uint8_t opcode;
 
-    ip = computer->cpu.reg.PC;
-    opcode = computer->mem[ip];
-    computer->cpu.meta.oplen = fetch_len(opcode);
-    for (i = 0; i < computer->cpu.meta.oplen; i++) {
-        computer->cpu.meta.ir[i] = computer->mem[ip + i];
+    ip = cpu->reg.PC;
+    opcode = ((virtual_computer_t *) cpu->meta.virtual)->mem[ip];
+    cpu->meta.oplen = fetch_len(opcode);
+    for (i = 0; i < cpu->meta.oplen; i++) {
+        cpu->meta.ir[i] = ((virtual_computer_t *) cpu->meta.virtual)->mem[ip + i];
     }
-    print_ir(computer);
+    print_ir(cpu);
 }
 
-void decode (virtual_computer_t *computer)
+void decode (cpu_context_t *cpu)
 {
 
 }
 
-void execute (virtual_computer_t *computer)
+void execute (cpu_context_t *cpu)
 {
-    opcode_table[computer->cpu.meta.ir[0]].do_op();
-    computer->cpu.reg.PC += computer->cpu.meta.oplen;
+    opcode_table[cpu->meta.ir[0]].do_op();
+    cpu->reg.PC += cpu->meta.oplen;
 }
 
 
@@ -397,18 +396,20 @@ int main (void)
     uint32_t end_address;
     int i;
     virtual_computer_t *computer;
+    cpu_context_t *my_cpu;  // Can also use &computer->cpu
 
     computer = create_computer(M6502, MEMORY_SIZE);
+    my_cpu = &computer->cpu;
     load_srec(computer, "dow.s28", &start_address, &end_address);
     printf("\nStart address: $%08X", start_address);
     printf("\n  End address: $%08X\n", end_address);
-    computer->cpu.reg.PC = start_address;
-    dump_registers(&computer->cpu);
+    my_cpu->reg.PC = start_address;
+    dump_registers(my_cpu);
     // disasm(computer, start_address, end_address);
     for (i = 0; i < 30; i++) {
-        fetch(computer);
-        decode(computer);
-        execute(computer);
+        fetch(my_cpu);
+        decode(my_cpu);
+        execute(my_cpu);
     }
     printf("\n\n\nCPU simulator done!\n");
 }
