@@ -1,7 +1,8 @@
 ./64tass --m65816 dow.asm -L dow.lst --output=dow.s28 --s-record --long-address
 gcc -c -Wall sim6502.c 
 gcc -c -Wall sim_opcodes.c
-cc sim_opcodes.o sim6502.o -o sim6502
+gcc -c -Wall sim_computer.c
+cc sim_opcodes.o sim_computer.o sim6502.o -o sim6502
 
 
 
