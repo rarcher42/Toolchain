@@ -392,7 +392,31 @@ void execute (cpu_context_t *cpu)
     cpu->reg.PC += cpu->meta.oplen;
 }
 
+uint8_t cpu_read (cpu_context_t *cpu, uint32_t address)
+{
+    virtual_computer_t *computer;
 
+    computer = (virtual_computer_t *) cpu->meta.virtual;
+    if (address < computer->memory_size)
+        return computer->mem[address];
+    else {
+        printf("\nInvalid memory address $%08X", address);
+        return 0;
+    }
+}
+
+void cpu_write (cpu_context_t *cpu, uint32_t address, uint8_t val)
+{
+    virtual_computer_t *computer;
+    computer = (virtual_computer_t *) cpu->meta.virtual;
+
+    if (address < computer->memory_size) {
+        computer->mem[address] = val;
+    } else {
+        printf("\nInvalid memory address $%08X", address);
+        return;
+    }
+}
 int main (void)
 {
     uint32_t start_address;

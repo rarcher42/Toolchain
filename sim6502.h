@@ -44,7 +44,7 @@ typedef struct {
 
 
 // CPU op table stuff
-#define MAX_OPS_LEN (3)
+#define MAX_OPSTR_LEN (3)
 
 
 typedef enum
@@ -58,7 +58,7 @@ typedef enum
 
 typedef struct op_tbl
 {
-    char ops[MAX_OPS_LEN+1];    // Hold full opcode plus null
+    char ops[MAX_OPSTR_LEN+1];    // Hold full opcode plus null
     uint16_t support_flags;      // Flags for unsupported CPU versions, from cpu_type_t enum
     uint8_t size;
     address_mode_t adm;
