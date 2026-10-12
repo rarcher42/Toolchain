@@ -368,12 +368,15 @@ void fetch (cpu_context_t *cpu)
     int i;
     uint16_t ip;
     uint8_t opcode;
+    virtual_computer_t *computer;
+
+    computer = (virtual_computer_t *) cpu->meta.virtual;
 
     ip = cpu->reg.PC;
-    opcode = ((virtual_computer_t *) cpu->meta.virtual)->mem[ip];
+    opcode = computer->mem[ip];
     cpu->meta.oplen = fetch_len(opcode);
     for (i = 0; i < cpu->meta.oplen; i++) {
-        cpu->meta.ir[i] = ((virtual_computer_t *) cpu->meta.virtual)->mem[ip + i];
+        cpu->meta.ir[i] = computer->mem[ip + i];
     }
     print_ir(cpu);
 }
