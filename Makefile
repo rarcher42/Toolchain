@@ -1,16 +1,21 @@
-CC=gcc
-CFLAGS=-I.
-DEPS = sim.h optbl_65816.h disasm.h calc_ea.h vm.h srec.h opcodes.h
-OBJ = sim.o optbl_65816.o disasm.o calc_ea.o vm.o srec.o opcodes.o
+CC = gcc
+CFLAGS = -Wall
 
-%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+TARGET = sim6502
+SOURCES = sim6502.c sim_opcodes.c sim_computer.c
+OBJECTS = $(SOURCES:.c=.o)
 
-sim: $(OBJ)
-	$(CC) -o $@ $^ $(CFLAGS)
+.PHONY: all clean
 
-.PHONY: clean
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $(TARGET)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o 
+	rm -f $(OBJECTS) $(TARGET)
+
 
