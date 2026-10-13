@@ -12,8 +12,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "sim_opcodes.h"
 #include "sim6502.h"
+#include "sim_opcodes.h"
 #include "sim_computer.h"
 
 // sizeinfo field: includes modifiers for M and X flags
@@ -307,11 +307,6 @@ uint8_t fetch_len(uint8_t op)
     return opcode_table[op].size & 0x3;    // Ignore M and X flags for now; 8 bit modes
 }
 
-void *get_op_function(uint8_t op)
-{
-    return opcode_table[op].do_op;
-}
-
 address_mode_t get_addr_mode (uint8_t op)
 {
     return opcode_table[op].adm;
@@ -325,6 +320,16 @@ void set_flag (cpu_context_t *cpu, uint8_t flag)
 void clr_flag (cpu_context_t *cpu, uint8_t flag)
 {
     cpu->reg.P = ((cpu->reg.P & ~flag) & 0xFF);
+}
+
+uint8_t get_flag (cpu_context_t *cpu, uint8_t flag)
+{
+    uint8_t is_set = 0;
+
+    if ((cpu->reg.P & flag) != 0) {
+        is_set = 1;
+    }
+    return is_set;
 }
 
 void dump_registers (cpu_context_t *cpu)
@@ -381,14 +386,20 @@ void fetch (cpu_context_t *cpu)
     print_ir(cpu);
 }
 
+uint32_t get_EA (cpu_context_t *cpu)
+{
+    return 0;   // FIXME: FUBAR
+}
+
 void decode (cpu_context_t *cpu)
 {
+    // Compute the effective address from the addressing mode parameter
 
 }
 
 void execute (cpu_context_t *cpu)
 {
-    opcode_table[cpu->meta.ir[0]].do_op();
+    opcode_table[cpu->meta.ir[0]].do_op(cpu);
     cpu->reg.PC += cpu->meta.oplen;
 }
 
