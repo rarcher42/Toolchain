@@ -388,6 +388,24 @@ void fetch (cpu_context_t *cpu)
 
 uint32_t get_EA (cpu_context_t *cpu)
 {
+    address_mode_t addr_mode;
+    uint32_t ea;
+
+    switch (addr_mode)
+    {
+
+        case OP_IMM:
+        case OP_NONE:
+            ea = 0xFFFFFFFF;    /* No address.  IR holds operand, or no operand (implied instruction) */
+            break;
+
+        case OP_REL:
+            ea = cpu->reg.PC;   /* Start with
+            break;
+
+        default:
+            break;
+    }
     return 0;   // FIXME: FUBAR
 }
 
