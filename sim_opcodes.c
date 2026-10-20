@@ -6,429 +6,429 @@
 #include "sim_opcodes.h"
 #include "sim_computer.h"
 
-static inline uint8_t get_A (cpu_context_t *cpu)
+static inline uint8_t get_A (void)
 {
-    return cpu->reg.A;
+    return cpu.reg.A;
 }
 
-static void put_A (cpu_context_t *cpu, uint8_t val)
+static void put_A (uint8_t val)
 {
-    cpu->reg.A = val;
+    cpu.reg.A = val;
 }
 
-static inline uint8_t get_X (cpu_context_t *cpu)
+static inline uint8_t get_X (void)
 {
-    return cpu->reg.X;
+    return cpu.reg.X;
 }
 
-static void put_X (cpu_context_t *cpu, uint8_t val)
+static void put_X (uint8_t val)
 {
-    cpu->reg.X = val;
+    cpu.reg.X = val;
 }
 
-static inline uint8_t get_Y (cpu_context_t *cpu)
+static inline uint8_t get_Y (void)
 {
-    return cpu->reg.Y;
+    return cpu.reg.Y;
 }
 
-static void put_Y (cpu_context_t *cpu, uint8_t val)
+static void put_Y (uint8_t val)
 {
-    cpu->reg.Y = val;
+    cpu.reg.Y = val;
 }
 
-static inline uint8_t get_raw_S (cpu_context_t *cpu)
+static inline uint8_t get_raw_S (void)
 {
-    return cpu->reg.S;
+    return cpu.reg.S;
 }
 
-static void put_raw_S (cpu_context_t *cpu, uint8_t val)
+static void put_raw_S (uint8_t val)
 {
-    cpu->reg.S = val;
+    cpu.reg.S = val;
 }
 
-static inline uint8_t get_P (cpu_context_t *cpu)
+static inline uint8_t get_P (void)
 {
-    return cpu->reg.P;
+    return cpu.reg.P;
 }
 
-static void put_P (cpu_context_t *cpu, uint8_t val)
+static void put_P (uint8_t val)
 {
-    cpu->reg.P = val;
+    cpu.reg.P = val;
 }
 
-static inline uint16_t get_PC (cpu_context_t *cpu)
+static inline uint16_t get_PC (void)
 {
-    return cpu->reg.PC;
+    return cpu.reg.PC;
 }
 
-static void put_PC (cpu_context_t *cpu, uint16_t val)
+static void put_PC (uint16_t val)
 {
-    cpu->reg.PC = val;
+    cpu.reg.PC = val;
 }
 
-void change_zflag(cpu_context_t *cpu, uint16_t val)
+void change_zflag(uint16_t val)
 {
     if (val == 0) {
-        set_flag(cpu, Z_FLAG);
+        set_flag(Z_FLAG);
     } else {
-        clr_flag(cpu, Z_FLAG);
+        clr_flag(Z_FLAG);
     }
 }
 
 // Many instructions set N and Z flag by value.
 // N is set the MSB of result,
 // Z is set by whether the result is zero
-void change_nzflag(cpu_context_t *cpu, uint8_t val)
+void change_nzflag (uint8_t val)
 {
-    change_zflag(cpu, val);
+    change_zflag(val);
 
     if ((val & 0x80) == 0) {
-        clr_flag(cpu, N_FLAG);
+        clr_flag(N_FLAG);
     } else {
-        set_flag(cpu, N_FLAG);
+        set_flag(N_FLAG);
     }
 }
 
-static void push8 (cpu_context_t *cpu, uint8_t val)
+static void push8 (uint8_t val)
 {
     uint16_t sp;
 
-    sp = (get_raw_S(cpu) | 0x100) & 0x1FF;
-    cpu_write(cpu, sp, val);
-    put_raw_S(cpu, (--sp & 0xFF));
+    sp = (get_raw_S() | 0x100) & 0x1FF;
+    cpu_write(sp, val);
+    put_raw_S((--sp & 0xFF));
 }
 
-static void push16 (cpu_context_t *cpu, uint16_t val)
+static void push16 (uint16_t val)
 {
-    push8(cpu, (val >> 8) & 0xFF);
-    push8(cpu, val & 0xFF);
+    push8((val >> 8) & 0xFF);
+    push8(val & 0xFF);
 }
 
-uint8_t pop8 (cpu_context_t *cpu)
+uint8_t pop8 (void)
 {
     uint16_t sp;
     uint8_t val;
 
-    sp = (get_raw_S(cpu) + 1) | 0x100;
-    put_raw_S(cpu, sp & 0xFF);
-    val = cpu_read(cpu, sp);
+    sp = (get_raw_S() + 1) | 0x100;
+    put_raw_S(sp & 0xFF);
+    val = cpu_read(sp);
     return val;
 }
 
-uint16_t pop16 (cpu_context_t *cpu)
+uint16_t pop16 (void)
 {
     uint16_t val;
     uint8_t lsb;
-    lsb = pop8(cpu);
-    val = (pop8(cpu) << 8) | lsb;
+    lsb = pop8();
+    val = (pop8() << 8) | lsb;
     return val;
 }
 
-void nop (cpu_context_t *cpu)
+void nop (void)
 {
-    // Add cycle counter
+    // Add cycle count
 }
 
-void clc (cpu_context_t *cpu)
+void clc (void)
 {
-    clr_flag(cpu, C_FLAG);
+    clr_flag(C_FLAG);
 }
 
-void sec (cpu_context_t *cpu)
+void sec (void)
 {
-    set_flag(cpu, C_FLAG);
+    set_flag(C_FLAG);
 }
 
-void cld (cpu_context_t *cpu)
+void cld (void)
 {
-    clr_flag(cpu, D_FLAG);
+    clr_flag(D_FLAG);
 }
 
-void sed (cpu_context_t *cpu)
+void sed (void)
 {
-    set_flag(cpu, D_FLAG);
+    set_flag(D_FLAG);
 }
 
-void sei (cpu_context_t *cpu)
+void sei (void)
 {
-    set_flag(cpu, I_FLAG);
+    set_flag(I_FLAG);
 }
 
-void cli (cpu_context_t *cpu)
+void cli (void)
 {
-    clr_flag(cpu, I_FLAG);
+    clr_flag(I_FLAG);
 }
 
-void clv (cpu_context_t *cpu)
+void clv (void)
 {
-    clr_flag(cpu, V_FLAG);
+    clr_flag(V_FLAG);
 }
 
 /* Note:  there is no set overflow instruction */
 
-void sep (cpu_context_t *cpu)
+void sep (void)
 {
     printf("\nNot implemented!");
     exit(0);
 }
 
-void rep (cpu_context_t *cpu)
+void rep (void)
 {
     printf("\nNot implemented!");
     exit(0);
 }
 
-void dex (cpu_context_t *cpu)
+void dex (void)
 {
     uint8_t temp;
 
-    temp = (get_X(cpu) - 1);
-    change_nzflag(cpu, temp);
-    put_X(cpu, temp);
+    temp = (get_X() - 1);
+    change_nzflag(temp);
+    put_X(temp);
 }
 
-void dey (cpu_context_t *cpu)
+void dey (void)
 {
     uint8_t temp;
 
-    temp = (get_Y(cpu) - 1);
-    change_nzflag(cpu, temp);
-    put_Y(cpu, temp);
+    temp = (get_Y() - 1);
+    change_nzflag(temp);
+    put_Y(temp);
 }
 
 
-void inx (cpu_context_t *cpu)
+void inx (void)
 {
     uint8_t temp;
 
-    temp = get_X(cpu) + 1;
-    change_nzflag(cpu, temp);
-    put_X(cpu, temp);
+    temp = get_X() + 1;
+    change_nzflag(temp);
+    put_X(temp);
 }
 
-void iny (cpu_context_t *cpu)
+void iny (void)
 {
     uint8_t temp;
 
-    temp = get_Y(cpu) + 1;
-    change_nzflag(cpu, temp);
-    put_Y(cpu, temp);
+    temp = get_Y() + 1;
+    change_nzflag(temp);
+    put_Y(temp);
 }
 
-void phb (cpu_context_t *cpu)
+void phb (void)
 {
     // push8(cpu_state.DBR);
 }
 
-void phk (cpu_context_t *cpu)
+void phk (void)
 {
     // push8(cpu_state.PBR);
 }
 
-void phd (cpu_context_t *cpu)
+void phd (void)
 {
     // push16(cpu_state.DPR);
 }
 
-void php (cpu_context_t *cpu)
+void php (void)
 {
-    push8(cpu, get_P(cpu));
+    push8(get_P());
 }
 
-void pha (cpu_context_t *cpu)
+void pha (void)
 {
-    push8(cpu, get_A(cpu));
+    push8(get_A());
 }
 
-void phx (cpu_context_t *cpu)
-{
-}
-
-void phy (cpu_context_t *cpu)
+void phx (void)
 {
 }
 
-void pla (cpu_context_t *cpu)
+void phy (void)
+{
+}
+
+void pla (void)
 {
     uint8_t vb;
 
-    vb = pop8(cpu);
-    put_A(cpu, vb);
-    change_nzflag(cpu, vb);
+    vb = pop8();
+    put_A(vb);
+    change_nzflag(vb);
 }
 
-void plb (cpu_context_t *cpu)
+void plb (void)
 {
 }
 
-void pld (cpu_context_t *cpu)
+void pld (void)
 {
 }
 
-void plp (cpu_context_t *cpu)
+void plp (void)
 {
     uint8_t vb;
 
-    vb = pop8(cpu);
-    put_P(cpu, vb);
+    vb = pop8();
+    put_P(vb);
     // Don't set NV flags - they remain exactly as pulled from stack!
 }
 
-void plx(cpu_context_t *cpu)
+void plx(void)
 {
 }
 
-void ply (cpu_context_t *cpu)
+void ply (void)
 {
 }
 
-void plk (cpu_context_t *cpu)
+void plk (void)
 {
 }
 
-void tax (cpu_context_t *cpu)
+void tax (void)
 {
     uint8_t temp;
 
-    temp = get_A(cpu);
-    put_X(cpu, temp);
-    change_nzflag(cpu, temp);
+    temp = get_A();
+    put_X(temp);
+    change_nzflag(temp);
 }
 
-void tay (cpu_context_t *cpu)
+void tay (void)
 {
     uint8_t temp;
 
-    temp = get_A(cpu);
-    put_Y(cpu, temp);
-    change_nzflag(cpu, temp);
+    temp = get_A();
+    put_Y(temp);
+    change_nzflag(temp);
 }
 
-void tcd (cpu_context_t *cpu)
+void tcd (void)
 {
 }
 
-void tcs (cpu_context_t *cpu)
+void tcs (void)
 {
 }
 
-void tdc (cpu_context_t *cpu)
+void tdc (void)
 {
 }
 
-void tsc (cpu_context_t *cpu)
+void tsc (void)
 {
 }
 
-void tsx (cpu_context_t *cpu)
-{
-    uint8_t temp;
-
-    temp = get_raw_S(cpu);
-    put_X(cpu, temp);
-    change_nzflag(cpu, temp);
-}
-
-void txs (cpu_context_t *cpu)
+void tsx (void)
 {
     uint8_t temp;
 
-    temp = get_X(cpu);
-    put_raw_S(cpu, temp);
+    temp = get_raw_S();
+    put_X(temp);
+    change_nzflag(temp);
+}
+
+void txs (void)
+{
+    uint8_t temp;
+
+    temp = get_X();
+    put_raw_S(temp);
     // No flag changes!
 }
 
 
-void txy (cpu_context_t *cpu)
+void txy (void)
 {
 }
 
-void tyx (cpu_context_t *cpu)
+void tyx (void)
 {
 }
 
-void txa (cpu_context_t *cpu)
+void txa (void)
 {
     uint8_t temp;
 
-    temp = get_X(cpu);
-    put_A(cpu, temp);
-    change_nzflag(cpu, temp);
+    temp = get_X();
+    put_A(temp);
+    change_nzflag(temp);
 }
 
-void tya (cpu_context_t *cpu)
+void tya (void)
 {
     uint8_t temp;
 
-    temp = get_Y(cpu);
-    put_A(cpu, temp);
-    change_nzflag(cpu, temp);
+    temp = get_Y();
+    put_A(temp);
+    change_nzflag(temp);
 }
 
-void bcs (cpu_context_t *cpu)
+void bcs (void)
 {
-    if (get_flag(cpu, C_FLAG)) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(C_FLAG)) {
+        put_PC(get_EA());
     }
 }
 
-void bcc (cpu_context_t *cpu)
+void bcc (void)
 {
-    if (get_flag(cpu, C_FLAG) == 0) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(C_FLAG) == 0) {
+        put_PC(get_EA());
     }
 }
 
-void bne (cpu_context_t *cpu)
+void bne (void)
 {
-    if (get_flag(cpu, Z_FLAG) == 0) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(Z_FLAG) == 0) {
+        put_PC(get_EA());
     }
 }
 
-void beq (cpu_context_t *cpu)
+void beq (void)
 {
-    if (get_flag(cpu, Z_FLAG)) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(Z_FLAG)) {
+        put_PC(get_EA());
     }
 }
 
-void bmi (cpu_context_t *cpu)
+void bmi (void)
 {
-    if (get_flag(cpu, N_FLAG)) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(N_FLAG)) {
+        put_PC(get_EA());
     }
 }
 
-void bpl (cpu_context_t *cpu)
+void bpl (void)
 {
-    if (get_flag(cpu, N_FLAG) == 0) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(N_FLAG) == 0) {
+        put_PC(get_EA());
     }
 }
 
-void bvs (cpu_context_t *cpu)
+void bvs (void)
 {
-    if (get_flag(cpu, V_FLAG)) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(V_FLAG)) {
+        put_PC(get_EA());
     }
 }
 
-void bvc (cpu_context_t *cpu)
+void bvc (void)
 {
-    if (get_flag(cpu, V_FLAG) == 0) {
-        put_PC(cpu, get_EA(cpu));
+    if (get_flag(V_FLAG) == 0) {
+        put_PC(get_EA());
     }
 }
 
 #if 0
-void stp (cpu_context_t *cpu)
+void stp (void)
 {
     printf("Unimplemented!");
     exit(0);
 }
 
-void brak (cpu_context_t *cpu)
+void brak (void)
 {
     uint8_t lsb, msb;
 
@@ -453,35 +453,35 @@ void brak (cpu_context_t *cpu)
     cpu_dynamic_metadata.running = FALSE;
 }
 
-void unimp (cpu_context_t *cpu)
+void unimp (void)
 {
     printf("\nUnimplemented op-code %02X: aborting\n", get_ir_opcode());
     cpu_dynamic_metadata.running = FALSE;
 }
 
-void xce (cpu_context_t *cpu)
+void xce (void)
 {
 }
 
 // Branches and Jumps
-void bra (cpu_context_t *cpu)
+void bra (void)
 {
     cpu_state.PC = get_EA();
 }
 
-void brl (cpu_context_t *cpu)
+void brl (void)
 {
     cpu_state.PC = get_EA();
 }
 
 
 
-void jmp (cpu_context_t *cpu)
+void jmp (void)
 {
     cpu_state.PC = get_EA() - 3;
 }
 
-void jsr (cpu_context_t *cpu)
+void jsr (void)
 {
     uint16_t target;
     uint16_t ra;
@@ -492,11 +492,11 @@ void jsr (cpu_context_t *cpu)
     cpu_state.PC = target;
 }
 
-void jsl (cpu_context_t *cpu)
+void jsl (void)
 {
 }
 
-void rts (cpu_context_t *cpu)
+void rts (void)
 {
     uint16_t ra;
 
@@ -504,7 +504,7 @@ void rts (cpu_context_t *cpu)
     cpu_state.PC = ra;
 }
 
-void rti (cpu_context_t *cpu)
+void rti (void)
 {
     uint16_t ra;
     uint8_t flags;
@@ -516,11 +516,11 @@ void rti (cpu_context_t *cpu)
     cpu_state.PC = ra;
 }
 
-void rtl (cpu_context_t *cpu)
+void rtl (void)
 {
 }
 
-void jml (cpu_context_t *cpu)
+void jml (void)
 {
 }
 
@@ -544,7 +544,7 @@ void set_compare_borrow (cpu_context_t *cpu, uint32_t diff, BOOL sixteen)
     }
 }
 
-void cpx (cpu_context_t *cpu)
+void cpx (void)
 {
     uint16_t reg;
     uint16_t op;
@@ -571,7 +571,7 @@ void cpx (cpu_context_t *cpu)
     }
 }
 
-void cpy (cpu_context_t *cpu)
+void cpy (void)
 {
     uint16_t reg;
     uint16_t op;
@@ -599,7 +599,7 @@ void cpy (cpu_context_t *cpu)
     }
 }
 
-void cmp (cpu_context_t *cpu)
+void cmp (void)
 {
     uint16_t reg;
     uint16_t op;
@@ -626,7 +626,7 @@ void cmp (cpu_context_t *cpu)
     }
 }
 
-void xba (cpu_context_t *cpu)
+void xba (void)
 {
     uint8_t temp;
 
@@ -636,7 +636,7 @@ void xba (cpu_context_t *cpu)
     change_nzflag(temp, FALSE);
 }
 
-void lda (cpu_context_t *cpu)
+void lda (void)
 {
     if (GET_MSIZE() == 0) {
         load_temp16();
@@ -650,7 +650,7 @@ void lda (cpu_context_t *cpu)
 
 }
 
-void ldx (cpu_context_t *cpu)
+void ldx (void)
 {
     if (GET_XSIZE() == 0) {
         load_temp16();
@@ -663,7 +663,7 @@ void ldx (cpu_context_t *cpu)
     }
 }
 
-void ldy (cpu_context_t *cpu)
+void ldy (void)
 {
     if (GET_XSIZE() == 0) {
         load_temp16();
@@ -676,7 +676,7 @@ void ldy (cpu_context_t *cpu)
     }
 }
 
-void tsb (cpu_context_t *cpu)
+void tsb (void)
 {
     uint16_t v;
     uint8_t v_l;
@@ -700,7 +700,7 @@ void tsb (cpu_context_t *cpu)
     }
 }
 
-void trb (cpu_context_t *cpu)
+void trb (void)
 {
     uint16_t v;
     uint8_t v_l;
@@ -724,7 +724,7 @@ void trb (cpu_context_t *cpu)
     }
 }
 
-void sta (cpu_context_t *cpu)
+void sta (void)
 {
     if (GET_MSIZE() == 0) {
         cpu_dynamic_metadata.TEMP = cpu_state.A.C;
@@ -735,7 +735,7 @@ void sta (cpu_context_t *cpu)
     }
 }
 
-void stz (cpu_context_t *cpu)
+void stz (void)
 {
     if (GET_MSIZE() == 0) {
         cpu_dynamic_metadata.TEMP = (uint16_t) 0;
@@ -746,7 +746,7 @@ void stz (cpu_context_t *cpu)
     }
 }
 
-void stx (cpu_context_t *cpu)
+void stx (void)
 {
     if (GET_XSIZE() == 0) {
         cpu_dynamic_metadata.TEMP = cpu_state.X;
@@ -757,7 +757,7 @@ void stx (cpu_context_t *cpu)
     }
 }
 
-void sty (cpu_context_t *cpu)
+void sty (void)
 {
     if (GET_XSIZE() == 0) {
         cpu_dynamic_metadata.TEMP = cpu_state.Y;
@@ -769,7 +769,7 @@ void sty (cpu_context_t *cpu)
 }
 
 
-void anl (cpu_context_t *cpu)
+void anl (void)
 {
     uint16_t v1;
     uint16_t v2;
@@ -814,7 +814,7 @@ static void bit_nv(cpu_context_t *cpu, uint16_t v)
     }
 }
 
-void bit (cpu_context_t *cpu)
+void bit (void)
 {
     uint16_t v1;
     uint16_t v2;
@@ -864,7 +864,7 @@ void bit (cpu_context_t *cpu)
 }
 
 
-void eor (cpu_context_t *cpu)
+void eor (void)
 {
     uint16_t v1;
     uint16_t v2;
@@ -893,7 +893,7 @@ void eor (cpu_context_t *cpu)
     }
 }
 
-void ora (cpu_context_t *cpu)
+void ora (void)
 {
     uint16_t v1;
     uint16_t v2;
@@ -1073,7 +1073,7 @@ uint8_t bcd_sub16 (uint8_t x, uint8_t y, uint8_t c_in)
     return sum;
 }
 
-void adc (cpu_context_t *cpu)
+void adc (void)
 {
     uint32_t sum;
     uint16_t v1;
@@ -1127,7 +1127,7 @@ void adc (cpu_context_t *cpu)
     }
 }
 
-void sbc (cpu_context_t *cpu)
+void sbc (void)
 {
     uint32_t sum;
     uint16_t v1;
@@ -1302,7 +1302,7 @@ uint16_t rotate_right8 (cpu_context_t *cpu, uint8_t val)
 // ASL A, ROL A, ROR A, LSR A, DEC A, INC A operate entirely in A
 // and all other variants are read/modify/write to memory
 
-void inc (cpu_context_t *cpu)
+void inc (void)
 {
     address_mode_t address_mode;
     uint16_t op;
@@ -1343,7 +1343,7 @@ void inc (cpu_context_t *cpu)
     }
 }
 
-void dec (cpu_context_t *cpu)
+void dec (void)
 {
     address_mode_t address_mode;
     uint16_t op;
@@ -1385,7 +1385,7 @@ void dec (cpu_context_t *cpu)
 }
 
 
-void lsr (cpu_context_t *cpu)
+void lsr (void)
 {
     address_mode_t address_mode;
     uint16_t op;
@@ -1426,7 +1426,7 @@ void lsr (cpu_context_t *cpu)
     }
 }
 
-void asl (cpu_context_t *cpu)
+void asl (void)
 {
     address_mode_t address_mode;
     uint16_t op;
@@ -1467,7 +1467,7 @@ void asl (cpu_context_t *cpu)
     }
 }
 
-void rol (cpu_context_t *cpu)
+void rol (void)
 {
     address_mode_t address_mode;
     uint16_t op;
@@ -1508,7 +1508,7 @@ void rol (cpu_context_t *cpu)
     }
 }
 
-void ror (cpu_context_t *cpu)
+void ror (void)
 {
     address_mode_t address_mode;
     uint16_t op;

@@ -16,13 +16,16 @@
 #include "sim_opcodes.h"
 #include "sim_computer.h"
 
+cpu_context_t cpu;  // For now, just a global variable containing reg and meta fields
+uint8_t mem[MEMORY_SIZE];
+
 // sizeinfo field: includes modifiers for M and X flags
 const uint8_t FETCH1 = 0x01;
 const uint8_t FETCH2 = 0x02;
 const uint8_t FETCH3 = 0x03;
 const uint8_t FETCH4 = 0x04;    // 65C816 only
-const uint8_t M_A = 0x80;    // If M flag is 0, add 1 to ilen
-const uint8_t X_A = 0x40;    // If X = 0, then add 1 to inst len
+const uint8_t M_A = 0x80;       // (For 65c816 in 16 bit mode) If M flag is 0, add 1 to ilen
+const uint8_t X_A = 0x40;       // (For 65c816 in 16 bit mode) If X = 0, then add 1 to inst len
 
 // CPU support flags
 // 65816 65c02 NMOS6502
@@ -31,7 +34,7 @@ const uint8_t X_A = 0x40;    // If X = 0, then add 1 to inst len
 // NB = 100     Supported only on 65c816
 // UN = 000     Unsupported instruction
 
-const uint8_t AL = 0x7;
+const uint8_t AL = 0x7;     // Supported on all 65xxx chips from 1975 NMOS 6502 to 65c816
 const uint8_t N2 = 0x6;     // Only 6502 not supported
 const uint8_t NB = 0x4;     // Only 65816 supported
 const uint8_t NS = 0x0;     // Instruction not supported (invalid op-code)
@@ -312,32 +315,32 @@ address_mode_t get_addr_mode (uint8_t op)
     return opcode_table[op].adm;
 }
 
-void set_flag (cpu_context_t *cpu, uint8_t flag)
+void set_flag (uint8_t flag)
 {
-    cpu->reg.P |= flag;
+    cpu.reg.P |= flag;
 }
 
-void clr_flag (cpu_context_t *cpu, uint8_t flag)
+void clr_flag (uint8_t flag)
 {
-    cpu->reg.P = ((cpu->reg.P & ~flag) & 0xFF);
+    cpu.reg.P = ((cpu.reg.P & ~flag) & 0xFF);
 }
 
-uint8_t get_flag (cpu_context_t *cpu, uint8_t flag)
+uint8_t get_flag (uint8_t flag)
 {
     uint8_t is_set = 0;
 
-    if ((cpu->reg.P & flag) != 0) {
+    if ((cpu.reg.P & flag)) {
         is_set = 1;
     }
     return is_set;
 }
 
-void dump_registers (cpu_context_t *cpu)
+void dump_registers (void)
 {
     uint8_t f;
     char flagstr[9] = "        ";
 
-    f = cpu->reg.P;
+    f = cpu.reg.P;
     if (f & N_FLAG)
         flagstr[0] = 'N';
     if (f & V_FLAG)
@@ -354,118 +357,109 @@ void dump_registers (cpu_context_t *cpu)
     if (f & C_FLAG)
         flagstr[7] = 'C';
 
-    printf("PC=$%04X A=$%02X X=$%02X Y=$%02X SP=$01%02X P=%s\n", cpu->reg.PC, cpu->reg.A, cpu->reg.X, cpu->reg.Y, cpu->reg.S, flagstr);
+    printf("PC=$%04X A=$%02X X=$%02X Y=$%02X SP=$01%02X P=%s\n", cpu.reg.PC, cpu.reg.A, cpu.reg.X, cpu.reg.Y, cpu.reg.S, flagstr);
 }
 
-void print_ir (cpu_context_t *cpu)
+void print_ir (void)
 {
     int i;
 
-    printf("$%04X: ", cpu->reg.PC);
-    for (i = 0; i < cpu->meta.oplen; i++) {
-        printf("%02X ", cpu->meta.ir[i]);
+    printf("$%04X: ", cpu.reg.PC);
+    for (i = 0; i < cpu.meta.oplen; i++) {
+        printf("%02X ", cpu.meta.ir[i]);
     }
     printf("\n");
 }
 
-void fetch (cpu_context_t *cpu)
+void fetch (void)
 {
     int i;
     uint16_t ip;
     uint8_t opcode;
-    virtual_computer_t *computer;
 
-    computer = (virtual_computer_t *) cpu->meta.virtual;
-
-    ip = cpu->reg.PC;
-    opcode = computer->mem[ip];
-    cpu->meta.oplen = fetch_len(opcode);
-    for (i = 0; i < cpu->meta.oplen; i++) {
-        cpu->meta.ir[i] = computer->mem[ip + i];
+    ip = cpu.reg.PC;
+    opcode = mem[ip];
+    cpu.meta.oplen = fetch_len(opcode);
+    for (i = 0; i < cpu.meta.oplen; i++) {
+        cpu.meta.ir[i] = mem[ip + i];
     }
-    print_ir(cpu);
+    print_ir();
 }
 
-uint32_t get_EA (cpu_context_t *cpu)
+uint32_t get_EA (void)
 {
     address_mode_t addr_mode;
-    uint32_t ea;
+    uint32_t ea = 0x0;
 
+    addr_mode = get_addr_mode(cpu.meta.ir[0]);
     switch (addr_mode)
     {
-
         case OP_IMM:
         case OP_NONE:
             ea = 0xFFFFFFFF;    /* No address.  IR holds operand, or no operand (implied instruction) */
             break;
 
         case OP_REL:
-            ea = cpu->reg.PC;   /* Start with
+            ea = cpu.reg.PC;   /* Start with */
             break;
 
         default:
             break;
     }
-    return 0;   // FIXME: FUBAR
+    return ea;
 }
 
-void decode (cpu_context_t *cpu)
+void decode (void)
 {
     // Compute the effective address from the addressing mode parameter
 
 }
 
-void execute (cpu_context_t *cpu)
+void execute (void)
 {
-    opcode_table[cpu->meta.ir[0]].do_op(cpu);
-    cpu->reg.PC += cpu->meta.oplen;
+    opcode_table[cpu.meta.ir[0]].do_op();
+    cpu.reg.PC += cpu.meta.oplen;
 }
 
-uint8_t cpu_read (cpu_context_t *cpu, uint32_t address)
+uint8_t cpu_read (uint32_t address)
 {
-    virtual_computer_t *computer;
-
-    computer = (virtual_computer_t *) cpu->meta.virtual;
-    if (address < computer->memory_size)
-        return computer->mem[address];
+    if (address < MEMORY_SIZE)
+        return mem[address];
     else {
         printf("\nInvalid memory address $%08X", address);
         return 0;
     }
 }
 
-void cpu_write (cpu_context_t *cpu, uint32_t address, uint8_t val)
+void cpu_write (uint32_t address, uint8_t val)
 {
-    virtual_computer_t *computer;
-    computer = (virtual_computer_t *) cpu->meta.virtual;
-
-    if (address < computer->memory_size) {
-        computer->mem[address] = val;
+    if (address < MEMORY_SIZE) {
+        mem[address] = val;
     } else {
         printf("\nInvalid memory address $%08X", address);
         return;
     }
 }
+
+
 int main (void)
 {
     uint32_t start_address;
     uint32_t end_address;
     int i;
-    virtual_computer_t *computer;
-    cpu_context_t *my_cpu;  // Can also use &computer->cpu
 
-    computer = create_computer(M6502, MEMORY_SIZE);
-    my_cpu = &computer->cpu;
-    load_srec(computer, "dow.s28", &start_address, &end_address);
+    create_computer(M6502);
+
+    load_srec("dow.s28", &start_address, &end_address);
     printf("\nStart address: $%08X", start_address);
     printf("\n  End address: $%08X\n", end_address);
-    my_cpu->reg.PC = start_address;
-    dump_registers(my_cpu);
-    // disasm(computer, start_address, end_address);
+    cpu.reg.PC = start_address;
+    dump_registers();
+    disasm(start_address, end_address);
     for (i = 0; i < 30; i++) {
-        fetch(my_cpu);
-        decode(my_cpu);
-        execute(my_cpu);
+        fetch();
+        decode();
+        execute();
     }
     printf("\n\n\nCPU simulator done!\n");
 }

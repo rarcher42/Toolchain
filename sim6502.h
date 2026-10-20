@@ -36,13 +36,6 @@ typedef struct
     cpu_metadata_t meta;
 } cpu_context_t;
 
-typedef struct {
-    cpu_context_t cpu;
-    uint32_t memory_size;
-    uint8_t *mem;
-} virtual_computer_t;
-
-
 // CPU op table stuff
 #define MAX_OPSTR_LEN (3)
 
@@ -62,17 +55,18 @@ typedef struct op_tbl
     uint16_t support_flags;      // Flags for unsupported CPU versions, from cpu_type_t enum
     uint8_t size;
     address_mode_t adm;
-    void (*do_op)(cpu_context_t *cpu);	// Do the opcode!
-
+    void (*do_op)(void);	// Do the opcode!
 } op_tbl;
 
 
 char *get_mnemonic(uint8_t op);
 uint8_t fetch_len(uint8_t op);
-uint32_t get_EA(cpu_context_t *cpu);
-void set_flag(cpu_context_t *cpu, uint8_t flag);
-void clr_flag(cpu_context_t *cpu, uint8_t flag);
-uint8_t get_flag(cpu_context_t *cpu, uint8_t flag);
-uint8_t cpu_read(cpu_context_t *cpu, uint32_t address);
-void cpu_write(cpu_context_t *cpu, uint32_t address, uint8_t val);
+uint32_t get_EA(void);
+void set_flag(uint8_t flag);
+void clr_flag(uint8_t flag);
+uint8_t get_flag(uint8_t flag);
+uint8_t cpu_read(uint32_t address);
+void cpu_write(uint32_t address, uint8_t val);
 
+extern cpu_context_t cpu;  // For now, just a global variable containing reg and meta fields
+extern uint8_t mem[MEMORY_SIZE];

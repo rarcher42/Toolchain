@@ -1,109 +1,109 @@
-void nop(cpu_context_t *);
-void sec(cpu_context_t *);
-void clc(cpu_context_t *);
-void sed(cpu_context_t *);
-void cld(cpu_context_t *);
-void sei(cpu_context_t *);
-void cli(cpu_context_t *);
-void clv(cpu_context_t *);
+void nop(void);
+void sec(void);
+void clc(void);
+void sed(void);
+void cld(void);
+void sei(void);
+void cli(void);
+void clv(void);
 
-void sep(cpu_context_t *);
-void rep(cpu_context_t *);
+void sep(void);
+void rep(void);
 
-void inx(cpu_context_t *);
-void dex(cpu_context_t *);
-void iny(cpu_context_t *);
-void dey(cpu_context_t *);
+void inx(void);
+void dex(void);
+void iny(void);
+void dey(void);
 
-void stp(cpu_context_t *);
-void brak(cpu_context_t *);
+void stp(void);
+void brak(void);
 
-void xce(cpu_context_t *);
+void xce(void);
 
 
 // branch and jumps
-void bra(cpu_context_t *);
-void brl(cpu_context_t *);
-void bcs(cpu_context_t *);
-void bcc(cpu_context_t *);
-void bne(cpu_context_t *);
-void beq(cpu_context_t *);
-void bmi(cpu_context_t *);
-void bpl(cpu_context_t *);
-void bvs(cpu_context_t *);
-void bvc(cpu_context_t *);
-void jmp(cpu_context_t *);
-void jml(cpu_context_t *);
-void jsr(cpu_context_t *);
-void rts(cpu_context_t *);
-void jsl(cpu_context_t *);
-void rtl(cpu_context_t *);
+void bra(void);
+void brl(void);
+void bcs(void);
+void bcc(void);
+void bne(void);
+void beq(void);
+void bmi(void);
+void bpl(void);
+void bvs(void);
+void bvc(void);
+void jmp(void);
+void jml(void);
+void jsr(void);
+void rts(void);
+void jsl(void);
+void rtl(void);
 
 // loads
-void lda(cpu_context_t *);
-void ldx(cpu_context_t *);
-void ldy(cpu_context_t *);
-void sta(cpu_context_t *);
-void stz(cpu_context_t *);
-void stx(cpu_context_t *);
-void sty(cpu_context_t *);
+void lda(void);
+void ldx(void);
+void ldy(void);
+void sta(void);
+void stz(void);
+void stx(void);
+void sty(void);
 
-void tax(cpu_context_t *);
-void tay(cpu_context_t *);
-void tcd(cpu_context_t *);
-void tcs(cpu_context_t *);
-void tdc(cpu_context_t *);
-void tsc(cpu_context_t *);
-void tsx(cpu_context_t *);
-void txa(cpu_context_t *);
-void txs(cpu_context_t *);
-void tsx(cpu_context_t *);
-void txa(cpu_context_t *);
-void tya(cpu_context_t *);
-void txy(cpu_context_t *);
-void tyx(cpu_context_t *);
-void xba(cpu_context_t *);
+void tax(void);
+void tay(void);
+void tcd(void);
+void tcs(void);
+void tdc(void);
+void tsc(void);
+void tsx(void);
+void txa(void);
+void txs(void);
+void tsx(void);
+void txa(void);
+void tya(void);
+void txy(void);
+void tyx(void);
+void xba(void);
 
 // Simple stack ops
-void pha(cpu_context_t *);
-void phb(cpu_context_t *);
-void phd(cpu_context_t *);
-void phk(cpu_context_t *);
-void php(cpu_context_t *);
-void phx(cpu_context_t *);
-void phy(cpu_context_t *);
+void pha(void);
+void phb(void);
+void phd(void);
+void phk(void);
+void php(void);
+void phx(void);
+void phy(void);
 
-void pla(cpu_context_t *);
-void plb(cpu_context_t *);
-void pld(cpu_context_t *);
-void plp(cpu_context_t *);
-void plx(cpu_context_t *);
-void ply(cpu_context_t *);
-void plk(cpu_context_t *);
+void pla(void);
+void plb(void);
+void pld(void);
+void plp(void);
+void plx(void);
+void ply(void);
+void plk(void);
 
-void anl(cpu_context_t *);
-void eor(cpu_context_t *);
-void ora(cpu_context_t *);
+void anl(void);
+void eor(void);
+void ora(void);
 
 
-void cmp(cpu_context_t *);
-void cpx(cpu_context_t *);
-void cpy(cpu_context_t *);
-void adc(cpu_context_t *);
-void sbc(cpu_context_t *);
-void unimp(cpu_context_t *);
+void cmp(void);
+void cpx(void);
+void cpy(void);
+void adc(void);
+void sbc(void);
+void unimp(void);
 
-void inc(cpu_context_t *);
-void dec(cpu_context_t *);
-void lsr(cpu_context_t *);
-void asl(cpu_context_t *);
-void rol(cpu_context_t *);
-void ror(cpu_context_t *);
-void bit(cpu_context_t *);
-void tsb(cpu_context_t *);
-void trb(cpu_context_t *);
+void inc(void);
+void dec(void);
+void lsr(void);
+void asl(void);
+void rol(void);
+void ror(void);
+void bit(void);
+void tsb(void);
+void trb(void);
 
-void rti(cpu_context_t *);
+void rti(void);
 uint8_t bcd_add8(uint8_t x1, uint8_t x2, uint8_t carry_in);
 uint8_t bcd_sub4(uint8_t x1, uint8_t y1, uint8_t b_in);
 uint8_t bcd_sub8 (uint8_t x, uint8_t y, uint8_t c_in);

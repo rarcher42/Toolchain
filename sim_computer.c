@@ -7,41 +7,25 @@
 
 const int MAX_LINE = 130;
 
-
-// Create another virtual computer.  Add I/O, memory access rights, etc. along the way
-virtual_computer_t *create_computer(cpu_type_t cpu_type, uint32_t memory_size)
+void create_computer(cpu_type_t cpu_type)
 {
-    uint8_t *mem_ptr;
-    virtual_computer_t *computer = NULL;
-
-    mem_ptr = (uint8_t *) malloc(memory_size);
-    if (mem_ptr) {
-        computer = (virtual_computer_t *) malloc(sizeof(virtual_computer_t));
-        if (computer) {
-            computer->memory_size = memory_size;
-            computer->mem = mem_ptr;
-            computer->cpu.meta.cpu_type = cpu_type;
-            // Semi-kludge: for vonvenience, allow cpu_context.meta to point back to us for memory access
-            computer->cpu.meta.virtual = (void *) computer;
-        }
-    }
-    return computer;
+    cpu.meta.cpu_type = cpu_type;
 }
 
-uint8_t mem_read (virtual_computer_t *computer, uint32_t address)
+uint8_t mem_read (uint32_t address)
 {
-    if (address < computer->memory_size)
-        return computer->mem[address];
+    if (address < MEMORY_SIZE)
+        return mem[address];
     else {
         printf("\nInvalid memory address $%08X", address);
         return 0;
     }
 }
 
-void mem_write (virtual_computer_t *computer, uint32_t address, uint8_t val)
+void mem_write (uint32_t address, uint8_t val)
 {
-    if (address < computer->memory_size) {
-        computer->mem[address] = val;
+    if (address < MEMORY_SIZE) {
+        mem[address] = val;
     } else {
         printf("\nInvalid memory address $%08X", address);
         return;
@@ -74,7 +58,7 @@ uint32_t from_hex_str (uint8_t *s, uint8_t n)
     return sum;
 }
 
-void dump_hex (virtual_computer_t *computer, uint32_t sa, uint32_t ea)
+void dump_hex (uint32_t sa, uint32_t ea)
 {
     uint32_t addr;
 
@@ -82,12 +66,12 @@ void dump_hex (virtual_computer_t *computer, uint32_t sa, uint32_t ea)
         if ((addr & 0xF) == 0) {
             printf("\r\n%08X: ", addr);
         }
-        printf("%02X ", mem_read(computer, addr));
+        printf("%02X ", mem_read(addr));
     }
     printf("\r\n");
 }
 
-int load_srec (virtual_computer_t *computer, char *fn, uint32_t *start_address, uint32_t *end_address)
+int load_srec (char *fn, uint32_t *start_address, uint32_t *end_address)
 {
     int j;
     FILE *fp;
@@ -117,7 +101,7 @@ int load_srec (virtual_computer_t *computer, char *fn, uint32_t *start_address, 
                     j = 8;
                     while (nbytes-- > 0) {
                         b = from_hex_str((uint8_t *) &nextline[j], 2);
-                        mem_write(computer, addr, b);
+                        mem_write(addr, b);
                         if (addr < *start_address)
                             *start_address = addr;
                         if (addr > *end_address)
@@ -132,7 +116,7 @@ int load_srec (virtual_computer_t *computer, char *fn, uint32_t *start_address, 
                     j = 10;
                     while (nbytes-- > 0) {
                         b = from_hex_str((uint8_t *) &nextline[j], 2);
-                        mem_write(computer, addr, b);
+                        mem_write(addr, b);
                         if (addr < *start_address)
                             *start_address = addr;
                         if (addr > *end_address)
@@ -147,7 +131,7 @@ int load_srec (virtual_computer_t *computer, char *fn, uint32_t *start_address, 
                     j = 12;
                     while (nbytes-- > 0) {
                         b = from_hex_str((uint8_t *) &nextline[j], 2);
-                        mem_write(computer, addr, b);
+                        mem_write(addr, b);
                         if (addr < *start_address)
                             *start_address = addr;
                         if (addr > *end_address)
@@ -173,11 +157,11 @@ int load_srec (virtual_computer_t *computer, char *fn, uint32_t *start_address, 
     } else {
         return -1;
     }
-    dump_hex(computer, *start_address, *end_address);
+    dump_hex(*start_address, *end_address);
     return 0;
 }
 
-void disasm (virtual_computer_t *computer, uint32_t start, uint32_t end)
+void disasm (uint32_t start, uint32_t end)
 {
     uint32_t vpc;
     uint8_t fetchlen;
@@ -185,10 +169,10 @@ void disasm (virtual_computer_t *computer, uint32_t start, uint32_t end)
 
     vpc = start;
     while (vpc <= end) {
-        fetchlen = fetch_len(computer->mem[vpc]);
-        printf("%s  ", get_mnemonic(computer->mem[vpc]));
+        fetchlen = fetch_len(mem[vpc]);
+        printf("%s  ", get_mnemonic(mem[vpc]));
         for (i = 0; i < fetchlen; i++) {
-            printf(" %02X", computer->mem[vpc+i]);
+            printf(" %02X", mem[vpc+i]);
         }
         printf("\n");
         vpc += fetchlen;
