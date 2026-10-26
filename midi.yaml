@@ -1,0 +1,3 @@
+table:    'SN1371.csv'
+dial:    '/dev/dmmidi1'
+
