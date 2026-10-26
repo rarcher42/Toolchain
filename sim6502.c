@@ -388,10 +388,14 @@ void fetch (void)
 
 uint32_t get_EA (void)
 {
+    uint8_t extra_cycles;
     address_mode_t addr_mode;
     uint32_t ea = 0x0;
+    uint8_t y, h, l;
+    uint8_t offset;
 
     addr_mode = get_addr_mode(cpu.meta.ir[0]);
+    extra_cycles = 0;
     switch (addr_mode)
     {
         case OP_IMM:
@@ -399,8 +403,68 @@ uint32_t get_EA (void)
             ea = 0xFFFFFFFF;    /* No address.  IR holds operand, or no operand (implied instruction) */
             break;
 
+        case OP_ZP:
+            ea = (uint32_t) cpu.meta.ir[1] & 0xFF;
+            break;
+
+        case OP_ZP_X:
+            ea = (int32_t) ((cpu.meta.ir[1]) + cpu.reg.X) & 0xFF;
+            break;
+
+        case OP_ZP_Y:// ldX stX
+            ea = (int32_t) ((cpu.meta.ir[1] + cpu.reg.Y) & 0xFF);
+            break;
+
+        case OP_ABS:
+            ea = (uint32_t) ((cpu.meta.ir[2] << 8) | cpu.meta.ir[1]) & 0xFFFF;
+            break;
+
+        case OP_ABS_X:
+            ea = (uint32_t) (((cpu.meta.ir[2] << 8) | cpu.meta.ir[1]) + cpu.reg.X) & 0xFFFF;
+            if (((ea >> 8) & 0xFF) != (cpu.meta.ir[2])) {
+                extra_cycles = 1;   // Page crossing cycle
+            }
+            break;
+
+        case OP_ABS_Y:
+            ea = (uint32_t) (((cpu.meta.ir[2] << 8) | cpu.meta.ir[1]) + cpu.reg.Y) & 0xFFFF;
+            if (((ea >> 8) & 0xFF) != (cpu.meta.ir[2])) {
+                extra_cycles = 1;   // Page crossing cycle
+            }
+            break;
+
+        case OP_ZP_XI:
+            y = cpu.meta.ir[1] + cpu.reg.X;
+            l = mem[y & 0xFF];
+            h = mem[(y+1) & 0xFF];
+            ea = (h << 8) | l;
+            break;
+
+        case OP_ZP_IY:
+            y = cpu.meta.ir[1];
+            l = mem[y];
+            h = mem[(y+1) & 0xFF];
+            ea = ((h << 8) | l) + cpu.reg.Y;
+            if (((ea >> 8) & 0xFF) != h) {
+                extra_cycles = 1;   // Page crossing cycle
+            }
+            break;
+
         case OP_REL:
             ea = cpu.reg.PC;   /* Start with */
+            offset = cpu.meta.ir[1];
+            if (offset > 0x7F) {
+                ea = ea - offset;   // FUBAR may need additional offset due to PC advance/no advance
+            } else {
+                ea = ea + offset;   // FUBAR may need additional offset " "
+            }
+            break;
+
+        case OP_ABS_IND:
+            ea = (uint32_t) ((cpu.meta.ir[2] << 8) | cpu.meta.ir[1]) & 0xFFFF;
+            l = cpu.meta.ir[ea & 0xFFFF];
+            h = cpu.meta.ir[(ea + 1) & 0xFFFF];
+            ea = ((h << 8) | l) & 0xFFFF;
             break;
 
         default:

@@ -11,19 +11,9 @@ static inline uint8_t get_A (void)
     return cpu.reg.A;
 }
 
-static void put_A (uint8_t val)
-{
-    cpu.reg.A = val;
-}
-
 static inline uint8_t get_X (void)
 {
     return cpu.reg.X;
-}
-
-static void put_X (uint8_t val)
-{
-    cpu.reg.X = val;
 }
 
 static inline uint8_t get_Y (void)
@@ -31,29 +21,16 @@ static inline uint8_t get_Y (void)
     return cpu.reg.Y;
 }
 
-static void put_Y (uint8_t val)
-{
-    cpu.reg.Y = val;
-}
 
 static inline uint8_t get_raw_S (void)
 {
     return cpu.reg.S;
 }
 
-static void put_raw_S (uint8_t val)
-{
-    cpu.reg.S = val;
-}
 
 static inline uint8_t get_P (void)
 {
     return cpu.reg.P;
-}
-
-static void put_P (uint8_t val)
-{
-    cpu.reg.P = val;
 }
 
 static inline uint16_t get_PC (void)
@@ -61,12 +38,7 @@ static inline uint16_t get_PC (void)
     return cpu.reg.PC;
 }
 
-static void put_PC (uint16_t val)
-{
-    cpu.reg.PC = val;
-}
-
-void change_zflag(uint16_t val)
+void change_zflag (uint8_t val)
 {
     if (val == 0) {
         set_flag(Z_FLAG);
@@ -93,24 +65,26 @@ static void push8 (uint8_t val)
 {
     uint16_t sp;
 
-    sp = (get_raw_S() | 0x100) & 0x1FF;
+    sp = (cpu.reg.S | 0x100) & 0x1FF;
     cpu_write(sp, val);
-    put_raw_S((--sp & 0xFF));
+    cpu.reg.S = (--sp & 0xFF);
 }
 
+#if 0
 static void push16 (uint16_t val)
 {
     push8((val >> 8) & 0xFF);
     push8(val & 0xFF);
 }
+#endif
 
 uint8_t pop8 (void)
 {
     uint16_t sp;
     uint8_t val;
 
-    sp = (get_raw_S() + 1) | 0x100;
-    put_raw_S(sp & 0xFF);
+    sp = (cpu.reg.S + 1) | 0x100;
+    cpu.reg.S = (sp & 0xFF);
     val = cpu_read(sp);
     return val;
 }
@@ -129,6 +103,7 @@ void nop (void)
     // Add cycle count
 }
 
+// Fun with flags
 void clc (void)
 {
     clr_flag(C_FLAG);
@@ -178,22 +153,23 @@ void rep (void)
     exit(0);
 }
 
+
 void dex (void)
 {
     uint8_t temp;
 
-    temp = (get_X() - 1);
+    temp = cpu.reg.X - 1;
+    cpu.reg.X = temp;
     change_nzflag(temp);
-    put_X(temp);
 }
 
 void dey (void)
 {
     uint8_t temp;
 
-    temp = (get_Y() - 1);
+    temp = cpu.reg.Y - 1;
+    cpu.reg.Y = temp;
     change_nzflag(temp);
-    put_Y(temp);
 }
 
 
@@ -201,18 +177,18 @@ void inx (void)
 {
     uint8_t temp;
 
-    temp = get_X() + 1;
+    temp = cpu.reg.X + 1;
+    cpu.reg.X = temp;
     change_nzflag(temp);
-    put_X(temp);
 }
 
 void iny (void)
 {
     uint8_t temp;
 
-    temp = get_Y() + 1;
+    temp = cpu.reg.Y + 1;
+    cpu.reg.Y = temp;
     change_nzflag(temp);
-    put_Y(temp);
 }
 
 void phb (void)
@@ -232,12 +208,12 @@ void phd (void)
 
 void php (void)
 {
-    push8(get_P());
+    push8(cpu.reg.P);
 }
 
 void pha (void)
 {
-    push8(get_A());
+    push8(cpu.reg.A);
 }
 
 void phx (void)
@@ -253,7 +229,7 @@ void pla (void)
     uint8_t vb;
 
     vb = pop8();
-    put_A(vb);
+    cpu.reg.A = vb;
     change_nzflag(vb);
 }
 
@@ -270,7 +246,7 @@ void plp (void)
     uint8_t vb;
 
     vb = pop8();
-    put_P(vb);
+    cpu.reg.P = vb;
     // Don't set NV flags - they remain exactly as pulled from stack!
 }
 
@@ -290,8 +266,8 @@ void tax (void)
 {
     uint8_t temp;
 
-    temp = get_A();
-    put_X(temp);
+    temp = cpu.reg.A;
+    cpu.reg.X = temp;
     change_nzflag(temp);
 }
 
@@ -299,8 +275,26 @@ void tay (void)
 {
     uint8_t temp;
 
-    temp = get_A();
-    put_Y(temp);
+    temp = cpu.reg.A;
+    cpu.reg.Y = temp;
+    change_nzflag(temp);
+}
+
+void txa (void)
+{
+    uint8_t temp;
+
+    temp = cpu.reg.X;
+    cpu.reg.A = temp;
+    change_nzflag(temp);
+}
+
+void tya (void)
+{
+    uint8_t temp;
+
+    temp = cpu.reg.Y;
+    cpu.reg.A = temp;
     change_nzflag(temp);
 }
 
@@ -324,17 +318,14 @@ void tsx (void)
 {
     uint8_t temp;
 
-    temp = get_raw_S();
-    put_X(temp);
+    temp = cpu.reg.S;
+    cpu.reg.X = temp;
     change_nzflag(temp);
 }
 
 void txs (void)
 {
-    uint8_t temp;
-
-    temp = get_X();
-    put_raw_S(temp);
+    cpu.reg.S = cpu.reg.X;
     // No flag changes!
 }
 
@@ -347,24 +338,8 @@ void tyx (void)
 {
 }
 
-void txa (void)
-{
-    uint8_t temp;
 
-    temp = get_X();
-    put_A(temp);
-    change_nzflag(temp);
-}
-
-void tya (void)
-{
-    uint8_t temp;
-
-    temp = get_Y();
-    put_A(temp);
-    change_nzflag(temp);
-}
-
+#if 0
 void bcs (void)
 {
     if (get_flag(C_FLAG)) {
@@ -421,7 +396,7 @@ void bvc (void)
     }
 }
 
-#if 0
+
 void stp (void)
 {
     printf("Unimplemented!");
@@ -433,24 +408,14 @@ void brak (void)
     uint8_t lsb, msb;
 
     printf("\nBRK - STOPPING!\n");
-    if (IS_EMU()) {
+    if (IS_EMU(
         push16(cpu_state.SP + 2);
         push8(cpu_state.flags | B_FLAG); // 65x02 doesn't set B flag, ONLY on stack copy!
         SET_FLAG(I_FLAG);
         lsb = cpu_read(0xFFFE);
         msb = cpu_read(0xFFFF);
         cpu_state.PC = (msb << 8) | lsb;
-    } else {
-        push8(cpu_state.PBR);
-        push16(cpu_state.SP + 2);
-        push8(cpu_state.flags);
-        SET_FLAG(I_FLAG);
-        cpu_state.PBR = 0;
-        lsb = cpu_read(0xFFE6);
-        msb = cpu_read(0xFFE7);
-        cpu_state.PC = (msb << 8) | lsb;
     }
-    cpu_dynamic_metadata.running = FALSE;
 }
 
 void unimp (void)
@@ -1086,45 +1051,24 @@ void adc (void)
         c_in = 0;
     }
 
-    if (GET_MSIZE() == 0) {
-        // 16 bit add
-        v1 = cpu_state.A.C;
-        load_temp16();
-        v2 = cpu_dynamic_metadata.TEMP;
-        if (GET_FLAG(D_FLAG)) {
-            sum = bcd_add16(v1, v2, c_in);
-        } else {
-            sum = v1 + v2 + c_in;
-            if (sum > 0xFFFF) {
-                SET_FLAG(C_FLAG);
-            } else {
-                CLR_FLAG(C_FLAG);
-            }
-        }
-        sum &= 0xFFFF;
-        cpu_state.A.C = sum;
-        change_nzflag(sum, TRUE);
-        change_vflag(v1, v2, sum, TRUE);
+    // 8 bits
+    v1 = cpu.A;
+    load_temp8();
+    v2 = cpu_dynamic_metadata.TEMP & 0xFF;
+    if (GET_FLAG(D_FLAG)) {
+        sum = bcd_add8(v1, v2, c_in);
     } else {
-        // 8 bits
-        v1 = cpu_state.A.AL;
-        load_temp8();
-        v2 = cpu_dynamic_metadata.TEMP & 0xFF;
-        if (GET_FLAG(D_FLAG)) {
-            sum = bcd_add8(v1, v2, c_in);
+        sum = v1 + v2 + c_in;
+        if (sum > 0xFF) {
+            SET_FLAG(C_FLAG);
         } else {
-            sum = v1 + v2 + c_in;
-            if (sum > 0xFF) {
-                SET_FLAG(C_FLAG);
-            } else {
-                CLR_FLAG(C_FLAG);
-            }
+            CLR_FLAG(C_FLAG);
         }
-        sum &= 0xFF;
-        cpu_state.A.AL = sum;
-        change_nzflag(sum, FALSE);
-        change_vflag(v1, v2, sum, FALSE);
     }
+    sum &= 0xFF;
+    cpu_state.A.AL = sum;
+    change_nzflag(sum, FALSE);
+    change_vflag(v1, v2, sum, FALSE);
 }
 
 void sbc (void)

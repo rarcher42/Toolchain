@@ -2,10 +2,56 @@ import sys
 import time
 import math
 
+CSV_FILE = "SN1371.csv"
 cur_time = [0.0, 0.0, 0.0, 0.0]
 last_time = [0.0, 0.0, 0.0, 0.0]    # Remember timestamp of last controller change
 last_val = [-1, -1, -1, -1]         # Remember last MIDI controller value to determine direction
 position = [0.0, 0.0, 0.0, 0.0]     # Calculated control position from rotation speed & direction.  Keep fractions, discard later if desired
+byte_table = bytearray(16384*16)    # Slot[i] @ byte_table[16*i] .. byte_table[16*i+15]
+
+
+def get_channel(index, channel):
+    base = int(16*index + 2*channel)
+    val = ((byte_table[base+1] & 0xFF) << 8) | (byte_table[base] & 0xFF)
+    return val
+
+def get_vector(index):
+    vec = []
+    for ch in range(0, 8):
+        vec.append(get_channel(index, ch))
+    return vec
+
+
+def process_dial_change(index):
+        print("%05d :" % index)
+        vectors = get_vector(index)
+        s = "PS"
+        for v in vectors:
+            s += "%04X" % v
+        return s
+
+
+def read_csv(fn):
+    table_index = 0
+    ti = 0
+    with open(fn) as fh:
+        for line in fh:
+            values = line.split(',')
+            for i in range(1, len(values)):
+                val = int(float(values[i].strip()))
+                byte_table[ti] = val & 0xFF
+                ti += 1
+                byte_table[ti] = (val >> 8) & 0xFF
+                ti += 1
+            table_index += 1
+
+    for i in range(0,1000):
+        print("%05d: " % i, end="")
+        for j in range(0,8):
+            print("$%04X " % get_channel(i, j), end="")
+        print("")
+    print("table_index = ", table_index)
+
 
 def clamp(val):
     if val > 16383.0:
@@ -70,6 +116,7 @@ def cmd_note_on(cmd):
     velocity = int.from_bytes(c, byteorder='little')
     print("NoteON(key=%d, velocity=%d)" % (key, velocity))
 
+
 def cmd_controller(cmd):
     c = midi.read(1)
     key = int.from_bytes(c, byteorder='little') & 0x3
@@ -83,8 +130,12 @@ def cmd_controller(cmd):
     increment = get_increment(rot_dir, key)     # Speed sensitive control
     position[key] = clamp(position[key] + increment)  # Range-limit
     last_time[key] = cur_time[key]     # Remember when the command came in for speed determination
-    print("Controller(key=%d, increment=%f, value=%f)" % (key, increment, position[key]))
+    if key == 0:
+        process_dial_change(int(position[0]))
+    else:
+        print("Controller(key=%d, value=%f)" % (key, position[key]))
 
+read_csv(CSV_FILE)
 dev = '/dev/dmmidi1'
 midi = open(dev, 'rb')
 
